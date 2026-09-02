@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Collab-docs</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a19; --muted: #5f5f5b; --rule: #e4e4e0; --accent: #2b6cb0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #16171a; --fg: #e8e8e4; --muted: #a0a09a; --rule: #2c2e33; --accent: #7fb0e8; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 3rem 1.25rem 6rem; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 44rem; margin: 0 auto; }
+  h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 .35rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.15rem; margin: 2.5rem 0 .6rem; letter-spacing: -0.005em; }
+  .updated { color: var(--muted); font-size: .875rem; margin: 0 0 2rem; }
+  p, li { color: var(--fg); }
+  ul { padding-left: 1.25rem; }
+  li { margin: .35rem 0; }
+  a { color: var(--accent); }
+  code {
+    font: .875em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: color-mix(in srgb, var(--fg) 8%, transparent);
+    padding: .1em .35em; border-radius: 3px;
+  }
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 3rem 0 1.5rem; }
+  footer { color: var(--muted); font-size: .875rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Collab-docs · Last updated 1 September 2026</p>
+
+  <p>Collab-docs is a personal, non-commercial project demonstrating collaborative
+  text editing. This policy describes exactly what the application stores, what it
+  does not, and how Google account data is handled. It is written to match what the
+  code actually does.</p>
+
+  <h2>What is stored when you sign in</h2>
+  <p>You can sign in with an email and password, or with Google. In either case the
+  application stores:</p>
+  <ul>
+    <li>Your <strong>email address</strong> and <strong>display name</strong>.</li>
+    <li>A randomly assigned <strong>presence colour</strong>, used to identify you to
+    collaborators in a shared document.</li>
+    <li>A <strong>session token, stored only as a SHA-256 hash</strong>, which expires
+    30 days after it is issued.</li>
+    <li>If you signed in with Google, the <strong>stable subject identifier</strong>
+    Google issues for your account. This is what links your sign-in to your account.
+    The email address is not used as the key, because addresses can change.</li>
+  </ul>
+  <p>Your Google profile picture is <strong>not</strong> stored. If you signed in with
+  Google, no password is stored for your account at all.</p>
+
+  <h2>What is stored when you use the editor</h2>
+  <ul>
+    <li>The <strong>content of documents</strong> you create, as an append-only log of
+    edits plus periodic snapshots.</li>
+    <li><strong>Comments, tasks and tab names</strong>, together with the display name
+    of whoever wrote them.</li>
+    <li><strong>Sharing permissions</strong> — which accounts may read or edit a
+    document.</li>
+  </ul>
+  <p>Because edits are stored as an append-only log, earlier versions of a document
+  remain recoverable through version history until the document is deleted.</p>
+
+  <h2>Google Drive</h2>
+  <p>The optional <em>Import from Drive</em> feature uses the
+  <code>drive.file</code> scope. This is the narrowest Drive permission Google offers,
+  and it was chosen deliberately:</p>
+  <ul>
+    <li>It grants access <strong>only to the individual files you personally select</strong>
+    through Google's own file picker. The application cannot list, browse, search or
+    read anything else in your Drive.</li>
+    <li>The access token is obtained <strong>in your browser and stays there</strong>.
+    It is never transmitted to, or stored on, this application's servers. This
+    application's servers never contact Google Drive.</li>
+    <li><strong>No refresh token is requested.</strong> The access token expires on its
+    own, typically within an hour, and cannot be renewed without you granting
+    permission again. The application has no ability to read your Drive when you are
+    not present.</li>
+    <li>An import is a <strong>one-time copy</strong>. The selected document is exported
+    once, converted, and becomes an ordinary document here. Your original file in Drive
+    is never modified, never written to, and is not linked to the copy.</li>
+  </ul>
+  <p>Collab-docs' use and transfer of information received from Google APIs adheres to
+  the <a href="https://developers.google.com/terms/api-services-user-data-policy"
+  rel="noopener">Google API Services User Data Policy</a>, including the Limited Use
+  requirements. Google user data is used solely to provide the sign-in and document
+  import features described above.</p>
+
+  <h2>What is not done</h2>
+  <ul>
+    <li>No advertising, and no advertising identifiers.</li>
+    <li>No analytics, tracking pixels or third-party trackers.</li>
+    <li>Your data is <strong>never sold, rented or shared</strong> with third parties.</li>
+    <li>No data is used to train machine learning models.</li>
+  </ul>
+
+  <h2>Where data is held</h2>
+  <p>The application runs on <a href="https://render.com" rel="noopener">Render</a> and
+  stores data in a <a href="https://neon.tech" rel="noopener">Neon</a> PostgreSQL
+  database. These providers process data solely to host the service. Traffic is served
+  over HTTPS.</p>
+
+  <h2>Deleting your data</h2>
+  <p>You can delete individual documents from within the application. To delete your
+  account and everything associated with it, email the address below and it will be
+  removed from the database.</p>
+  <p>You can revoke this application's access to your Google account at any time, and
+  independently of anything above, at
+  <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>.</p>
+
+  <h2>Children</h2>
+  <p>This project is not directed at children under 13 and does not knowingly collect
+  their personal information.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the date at the top of this page will change with it.</p>
+
+  <h2>Contact</h2>
+  <p>Questions, or a deletion request:
+  <a href="mailto:poojaa.negi17@gmail.com">poojaa.negi17@gmail.com</a></p>
+
+  <hr>
+  <footer><a href="/">← Back to Collab-docs</a></footer>
+</main>
+</body>
+</html>

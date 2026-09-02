@@ -1,0 +1,19 @@
+{
+  "name": "@collab/server",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js --no-rate-limit",
+    "dev:ot": "node --watch src/index.js --engine=ot --port=8081 --no-rate-limit",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@collab/ot": "*",
+    "@collab/protocol": "*",
+    "ioredis": "^6.0.0",
+    "pg": "^8.23.0",
+    "ws": "^8.21.3",
+    "yjs": "^13.6.32"
+  }
+}

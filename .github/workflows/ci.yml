@@ -1,0 +1,273 @@
+# Every harness in this repository, on every push.
+#
+# The point of running them here rather than trusting the README's list is that
+# the list is long and real-browser tests are exactly the kind that quietly rot
+# when nobody runs them. If the badge is green, the property tests, the
+# end-to-end harnesses and the headless-Chrome journeys all passed on a machine
+# that is not the author's.
+#
+# Three jobs, split by what they need rather than by what they test:
+#   pure     nothing but Node -- the algorithms and the generated files
+#   e2e      a running pair of servers, and a database
+#   browser  the above, plus a Vite dev server and real Chrome
+#
+# ---------------------------------------------------------------------------
+# WHY THERE IS A DATABASE STEP
+#
+# Storage is Postgres and the servers will not start without DATABASE_URL, so
+# `pure` is the only job that needs no database and the other two would fail
+# at `wait-on tcp:8080` without one.
+#
+# Each run gets its OWN NEON BRANCH, created before the tests and deleted
+# after. That buys three things at once:
+#
+#   - CI never touches production data. A branch is a copy-on-write clone, so
+#     it is instant and free, and anything the tests do to it dies with it.
+#   - Concurrent runs cannot collide. The harnesses name their scratch schemas
+#     after themselves (`t_api`, `t_restart`, ...), so two runs sharing one
+#     database would drop each other's schemas mid-test. Separate branches
+#     make that impossible rather than unlikely.
+#   - The branch is thrown away, so a leaked scratch schema cannot accumulate.
+#
+# NEON_API_KEY and NEON_PROJECT_ID are repository secrets. The branch's own
+# connection strings never leave the runner.
+# ---------------------------------------------------------------------------
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  pure:
+    name: Algorithms and generated files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      # Before everything, because it is the check that decides whether the
+      # others could run at all. It cannot catch a broken ci.yml from in here
+      # -- a workflow that does not parse never reaches a runner, which is why
+      # this also runs in `npm test` on a laptop -- but it does catch a broken
+      # render.yaml, which nothing local would otherwise read until a deploy.
+      - name: The deployment configuration parses
+        run: node tools/config-check.mjs
+
+      # Then the ledger: it is instant, and a stale one would otherwise
+      # surface later as a confusing content mismatch in the landing harness.
+      - name: The decision index matches docs/decisions
+        run: node tools/generate-adr-index.mjs --check
+
+      - name: OT transform laws (12k random assertions)
+        run: node tools/ot-properties.mjs
+      - name: Attributed transform laws, fuzzed
+        run: node tools/rich-ot-properties.mjs
+      - name: The same laws as worked examples
+        run: node tools/rich-ot-checklist.mjs
+      - name: Comment-anchor laws, and the pinned OT counterexample
+        run: node tools/anchor-properties.mjs
+      - name: 'Sanitisers -- no javascript: links, no CSS escaping its property'
+        run: node tools/attribute-safety-test.mjs
+      - name: Markdown export -- what it keeps and what it admits losing
+        run: node tools/markdown-export-test.mjs
+
+      - name: The client builds
+        run: npm run build
+
+      # Straight after the build, in the job that has one. A bundle budget is
+      # the same kind of check as the ADR index above: a fact about the repo
+      # that is cheap to verify and rots silently if nobody does.
+      - name: The bundle is within budget
+        run: node tools/bundle-budget.mjs
+
+  e2e:
+    name: End to end (both engines)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      - name: Create an isolated Neon branch for this run
+        id: db
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          branch_name: ci-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      # The branch is a clone of production's SCHEMA and data, but it is a
+      # throwaway, so the harnesses may own it completely: they create and drop
+      # their own scratch schemas, which needs the owner. DDL only, though --
+      # the owner is the ADMIN credential and never the runtime one, exactly as
+      # in production. `ensureSchema` grants DML on each schema it creates to
+      # `collab_app`, including the scratch ones, which is what lets the tests
+      # run as the restricted role rather than proving the owner works.
+      - name: Bootstrap the schema
+        env:
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: node tools/migrate.mjs
+
+      # The same branch again, for the role the SERVER uses. The action returns
+      # an existing branch rather than failing, so this is a second credential
+      # for the first branch, not a second branch.
+      #
+      # Production runs as `collab_app` -- DML inside the application schemas
+      # and nothing else -- and `tools/security-check.mjs` asserts exactly that
+      # of whatever DATABASE_URL it is given. Handing it the owner made every
+      # least-privilege assertion in that harness fail, which is the harness
+      # working: CI was not running the configuration production runs.
+      - name: The runtime credential for the same branch
+        id: app
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          branch_name: ci-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          role: collab_app
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      - name: Start both engine servers
+        env:
+          DATABASE_URL: ${{ steps.app.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: |
+          npm run dev:server > /tmp/crdt.log 2>&1 &
+          npm run dev:server:ot > /tmp/ot.log 2>&1 &
+          npx --yes wait-on tcp:8080 tcp:8081 --timeout 90000
+
+      - name: The full headless suite
+        env:
+          DATABASE_URL: ${{ steps.app.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: npm test
+
+      # Owns its own server process and port (8097), so it runs outside the
+      # suite above rather than inside it. The landing page renders the record
+      # this writes, and `landing-test` asserts the page and the file agree --
+      # but only this proves the record is still true of the current code.
+      - name: Durability under SIGKILL
+        env:
+          DATABASE_URL: ${{ steps.app.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: node tools/measure-durability.mjs
+
+      - name: Server logs
+        if: failure()
+        run: tail -n 100 /tmp/crdt.log /tmp/ot.log
+
+      - name: Delete the branch
+        if: always()
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          branch: ci-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+  browser:
+    name: Real Chrome
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      # Its own branch, not the e2e job's: the two jobs run in parallel and
+      # would otherwise be the concurrent-run collision this design exists to
+      # prevent, just inside one workflow instead of across two.
+      - name: Create an isolated Neon branch for this run
+        id: db
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          branch_name: ci-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      - name: Bootstrap the schema
+        env:
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: node tools/migrate.mjs
+
+      # puppeteer-core downloads nothing; it drives a Chrome that already
+      # exists. That is the same arrangement as on a developer machine, which
+      # is why CHROME_PATH is the only knob the harnesses expose.
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          chrome-version: stable
+
+      - name: Start both engine servers and the client
+        env:
+          DATABASE_URL: ${{ steps.db.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: |
+          npm run dev:server > /tmp/crdt.log 2>&1 &
+          npm run dev:server:ot > /tmp/ot.log 2>&1 &
+          npm run dev:client > /tmp/vite.log 2>&1 &
+          npx --yes wait-on tcp:8080 tcp:8081 http://localhost:5173 --timeout 120000
+
+      - name: The real-browser suite
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          DATABASE_URL: ${{ steps.db.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: npm run test:browser
+
+      # Its own step rather than inside `test:browser`, because when this one
+      # fails the fix is usually a colour token or a heading level -- a
+      # different kind of change from whatever broke a sync harness, and worth
+      # seeing named on its own line in the run.
+      - name: Accessibility across every route
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          DATABASE_URL: ${{ steps.db.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: node tools/a11y-test.mjs
+
+      - name: The landing mosaic and /decisions
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          DATABASE_URL: ${{ steps.db.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: node tools/landing-test.mjs
+
+      - name: The landing across eight viewports
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          DATABASE_URL: ${{ steps.db.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: node tools/responsive-test.mjs
+
+      - name: The lab -- partition, diverge, heal, converge
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          DATABASE_URL: ${{ steps.db.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+        run: node tools/lab-test.mjs
+
+      - name: Logs
+        if: failure()
+        run: tail -n 100 /tmp/crdt.log /tmp/ot.log /tmp/vite.log
+
+      - name: Delete the branch
+        if: always()
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          branch: ci-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          api_key: ${{ secrets.NEON_API_KEY }}

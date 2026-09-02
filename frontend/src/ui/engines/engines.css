@@ -1,0 +1,416 @@
+/**
+ * The interactive explainer at the top of /engines.
+ *
+ * Scoped under `.engine-demo` throughout. The long-form styles on this page
+ * come from scale.css, which owns generic names like `.prose-section`, and a
+ * bare `.lane` or `.chip` here would reach into them.
+ *
+ * Two lanes, and they are colour-coded to the two engines the rest of the site
+ * already uses: OT is the one that loses work under a partition and is tinted
+ * the warmer wash, the CRDT the cooler one. The tints are the shared washes
+ * from theme.css rather than new colours -- this page is not a place to invent
+ * a sixth one.
+ */
+
+.engine-demo {
+  /* Same rhythm as the section cards around it -- it IS one of them, with a
+     wash instead of paper because it is the page's centrepiece rather than
+     something to read a paragraph of. */
+  margin: 18px 0 0;
+  padding: 18px 18px 14px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--wash-cream);
+  box-shadow: var(--card-shadow);
+}
+
+/* ---- setup: the word, and who does what ---------------------------------- */
+
+.engine-demo .ed-title {
+  margin: 0 0 4px;
+  font-size: 17px;
+  letter-spacing: -0.015em;
+}
+
+.engine-demo .ed-base {
+  margin: 0 0 10px;
+  font-size: 14.5px;
+  color: var(--fg-dim);
+}
+.engine-demo .ed-base b {
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid var(--line-bright);
+  color: var(--fg);
+}
+
+.engine-demo .ed-picks { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.engine-demo .ed-pick { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+/* The two people are colour-coded, and the same two colours label the
+   characters each of them typed in the CRDT lane. That correspondence is the
+   only thing tying the two halves of the demo together, so it is carried by
+   the strongest signal available rather than by position. */
+.engine-demo .ed-pick-a .ed-who { color: #1d4ed8; }
+.engine-demo .ed-pick-b .ed-who { color: #a21caf; }
+
+.engine-demo .ed-chip {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line-bright);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--fg-dim);
+  cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.engine-demo .ed-chip:hover { border-color: var(--accent); color: var(--fg); }
+.engine-demo .ed-chip.is-on {
+  background: #fff;
+  border-color: var(--accent);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: var(--card-shadow);
+}
+
+/* ---- the stage control --------------------------------------------------- */
+
+.engine-demo .ed-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.engine-demo .ed-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 10px 4px 5px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.engine-demo .ed-step-n {
+  display: grid;
+  place-items: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--line-bright);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.engine-demo .ed-step.is-done { color: var(--fg-dim); }
+.engine-demo .ed-step.is-done .ed-step-n { background: #fff; }
+.engine-demo .ed-step.is-on {
+  color: var(--fg);
+  font-weight: 600;
+  border-color: var(--line-bright);
+  background: #fff;
+}
+.engine-demo .ed-step.is-on .ed-step-n {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.engine-demo .ed-next {
+  margin-left: auto;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+.engine-demo .ed-next:hover { background: #0b5f59; }
+
+/* ---- the two lanes ------------------------------------------------------- */
+
+.engine-demo .ed-lanes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.engine-demo .ed-lane {
+  border: 1px solid var(--line-bright);
+  border-radius: var(--card-radius-sm);
+  background: rgba(255, 255, 255, 0.66);
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  /* Both lanes hold the same three stages and the stages are not the same
+     height. Without a floor the whole block jumps as you step, which reads as
+     the page reloading rather than as one thing advancing. */
+  min-height: 208px;
+}
+.engine-demo .ed-lane-ot { border-top: 3px solid #b45309; }
+.engine-demo .ed-lane-crdt { border-top: 3px solid #0f766e; }
+
+.engine-demo .ed-lane header { margin-bottom: 10px; }
+.engine-demo .ed-lane h3 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.engine-demo .ed-lane header p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg-faint);
+}
+
+.engine-demo .ed-body { display: flex; flex-direction: column; gap: 8px; }
+.engine-demo .ed-body-end { justify-content: center; flex: 1 1 auto; }
+
+/* ---- OT: operations ------------------------------------------------------ */
+
+.engine-demo .ed-op { display: flex; align-items: baseline; gap: 8px; }
+.engine-demo .ed-op code,
+.engine-demo .ed-rewrite code {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid var(--line-bright);
+  color: var(--fg);
+}
+.engine-demo .ed-op-a code { border-color: rgba(29, 78, 216, 0.35); }
+.engine-demo .ed-op-b code { border-color: rgba(162, 28, 175, 0.35); }
+
+.engine-demo .ed-rewrite {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* The old operation is struck through rather than removed: the lesson is that
+   it CHANGED, and a reader who never sees the previous value has to take that
+   on trust. */
+.engine-demo .ed-was { opacity: 0.55; text-decoration: line-through; }
+.engine-demo .ed-arrow {
+  font-size: 11px;
+  color: var(--fg-faint);
+  font-style: italic;
+}
+.engine-demo .ed-now {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.12);
+  font-weight: 600;
+}
+
+/* ---- CRDT: characters that carry an id ----------------------------------- */
+
+.engine-demo .ed-row { display: flex; align-items: center; gap: 8px; }
+
+/* The row label in both lanes. One rule: an operation's label and a character
+   row's label are the same thing wearing the same clothes, and they were
+   written out twice. */
+.engine-demo .ed-op span,
+.engine-demo .ed-row > span,
+.engine-demo .ed-who {
+  flex: 0 0 62px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.engine-demo .ed-who { flex: 0 0 auto; }
+
+.engine-demo .ed-chars { display: flex; gap: 4px; flex-wrap: wrap; }
+.engine-demo .ed-char {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 26px;
+  padding: 3px 5px 2px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid var(--line-bright);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.1;
+  color: var(--fg);
+}
+.engine-demo .ed-id {
+  font-style: normal;
+  font-size: 8.5px;
+  letter-spacing: 0.02em;
+  color: var(--fg-faint);
+}
+/* Whose character this is. Matches the two person colours above. */
+.engine-demo .ed-site-1 { border-color: rgba(29, 78, 216, 0.5); background: rgba(29, 78, 216, 0.07); }
+.engine-demo .ed-site-2 { border-color: rgba(162, 28, 175, 0.5); background: rgba(162, 28, 175, 0.07); }
+
+/* A tombstone: still in the list, no longer in the text. Drawn rather than
+   dropped, because "deleted characters leave a marker behind" is one of the
+   costs the page is trying to make concrete. */
+.engine-demo .ed-char.is-gone {
+  opacity: 0.42;
+  text-decoration: line-through;
+  background: repeating-linear-gradient(
+    45deg, transparent 0 3px, rgba(20, 24, 35, 0.06) 3px 6px);
+}
+
+.engine-demo .ed-say {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+
+.engine-demo .ed-result {
+  font-family: var(--mono);
+  font-size: 26px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  padding: 10px 0 6px;
+  color: var(--fg);
+}
+
+.engine-demo .ed-verdict {
+  margin: 12px 2px 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fg-dim);
+}
+
+/* ---- narrow ---------------------------------------------------------------
+   The lanes stack rather than shrink. Side by side is what makes the two
+   mechanisms comparable, but below ~640px each lane is too narrow to hold an
+   operation on one line, and a wrapped `retain 3, insert "s"` compares
+   nothing. */
+@media (max-width: 720px) {
+  .engine-demo { padding: 14px 13px 12px; }
+  .engine-demo .ed-lanes { grid-template-columns: 1fr; }
+  .engine-demo .ed-lane { min-height: 0; }
+  .engine-demo .ed-steps { flex-wrap: wrap; }
+  .engine-demo .ed-next { margin-left: 0; }
+  .engine-demo .ed-op span,
+  .engine-demo .ed-row > span { flex-basis: 54px; }
+}
+
+/* ======================================================== the page layout == */
+/*
+ * Three movements, in this order: meet the engines, watch them resolve one
+ * conflict, then ask questions about what you just saw. The card treatment is
+ * /decisions' -- same washes, same radius, same hairline -- because it is the
+ * same kind of reading, and a second card style would be a second thing to
+ * learn for no gain.
+ */
+
+.eng-page .prose-head { margin-bottom: 0; }
+
+/* ---- 1. the two engines, side by side ------------------------------------ */
+
+.eng-pair {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.eng-card {
+  padding: 18px 20px 16px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  scroll-margin-top: 18px;
+}
+/* The engine's colour, carried on the top edge -- the same two the demo's
+   lanes use, so the CRDT card and the CRDT lane are visibly the same subject. */
+.eng-card-crdt { border-top: 3px solid #0f766e; }
+.eng-card-ot { border-top: 3px solid #b45309; }
+
+.eng-kicker { display: flex; align-items: baseline; gap: 10px; }
+.eng-kicker h2 { margin: 0; font-size: 22px; font-weight: 780; letter-spacing: -0.02em; }
+.eng-tag {
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: .06em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px;
+  background: rgba(20, 24, 35, .05);
+  color: var(--fg-faint);
+}
+
+/* One inset treatment for every diagram on the page. */
+.eng-dia {
+  margin: 12px 0 0;
+  padding: 6px 8px;
+  border-radius: var(--card-radius-sm);
+  background: var(--wash-sky);
+  border: 1px solid var(--line);
+}
+.eng-dia .dia { display: block; width: 100%; max-width: 380px; height: auto; margin: 0 auto; }
+
+.eng-lede { margin: 12px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--fg); }
+
+/* The bill. Every engine on this page states one, in the same place, because
+   the cost is the part that makes it a trade rather than a preference. */
+.eng-cost {
+  margin: 10px 0 0;
+  padding: 10px 13px;
+  border-left: 3px solid var(--line-bright);
+  background: var(--wash-cream);
+  border-radius: 0 var(--card-radius-sm) var(--card-radius-sm) 0;
+  font-size: 13.5px; line-height: 1.55;
+  color: var(--fg-dim);
+}
+
+/* ---- 3. the questions ---------------------------------------------------- */
+
+.eng-qs {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.eng-q {
+  padding: 16px 18px 14px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+.eng-q h3 { margin: 0; font-size: 16.5px; font-weight: 720; letter-spacing: -0.015em; }
+.eng-q p { margin: 12px 0 0; font-size: 13.5px; line-height: 1.6; color: var(--fg-dim); }
+
+/* ---- 4. the foot --------------------------------------------------------- */
+
+.eng-foot {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 28px;
+  padding: 20px 22px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--wash-lilac);
+  box-shadow: var(--card-shadow);
+}
+.eng-foot h3 { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
+.eng-foot p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.6; color: var(--fg-dim); }
+.eng-links { list-style: none; margin: 0; padding: 0; }
+.eng-links li { font-size: 13.5px; line-height: 1.9; color: var(--fg-dim); }
+
+@media (max-width: 720px) {
+  /* One column. Two of these side by side on a phone makes each diagram about
+     150px wide, at which point its labels are unreadable. */
+  .eng-pair, .eng-qs, .eng-foot { grid-template-columns: minmax(0, 1fr); }
+}

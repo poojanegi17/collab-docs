@@ -1,0 +1,170 @@
+# Render blueprint for collab-docs.
+#
+# Three services: the CRDT server, the OT server, and the static client. The
+# database is Neon and is NOT declared here -- Render never provisions it, and
+# the connection strings are set as secrets in the dashboard.
+#
+# ---------------------------------------------------------------------------
+# SINGLE INSTANCE, DELIBERATELY. DO NOT RAISE numInstances.
+#
+# Rooms, presence and the pub/sub between them are in-process Maps
+# (backend/src/realtime/). Two instances of the same engine would each hold
+# half the people in a document and neither would know about the other: two
+# users editing the same page would see nothing from each other, silently,
+# with no error anywhere. The append-only log in Postgres would still be
+# correct, so this presents as "collaboration is broken", not as a crash.
+#
+# The seam for fixing it exists -- RoomRegistry, PubSub and PresenceStore are
+# interfaces with in-process implementations, and a Redis implementation is
+# the intended second one -- but it is not built, so until it is, this deploys
+# as one instance per engine and autoscaling stays off.
+# ---------------------------------------------------------------------------
+
+services:
+  # --- the CRDT server: every real document on the site (ADR-009) ----------
+  - type: web
+    name: collab-yjs
+    runtime: node
+    plan: free
+    region: oregon
+    numInstances: 1          # see the note above before changing this
+    buildCommand: npm ci
+    # DDL runs as the OWNER, never from the service -- which authenticates as
+    # a role that cannot create a table. On a paid plan that is a preDeploy
+    # step:
+    #
+    #     preDeployCommand: node tools/migrate.mjs
+    #
+    # `preDeployCommand` is a PAID feature, and on free it is not rejected --
+    # it is ignored. The schema would never be created, and the server would
+    # refuse to start, correctly but confusingly. So on free the same command
+    # is run by hand, once, before the first deploy:
+    #
+    #     DATABASE_URL_ADMIN=<owner, direct endpoint> npm run migrate
+    #
+    # It is idempotent, so re-running it after a schema change is correct.
+    # Restore the line above if this ever moves to starter.
+    startCommand: npm start -w @collab/server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: '24'
+      - key: ENGINE
+        value: yjs
+      - key: DB_SCHEMA
+        value: yjs
+      - key: ACCOUNTS_SCHEMA
+        value: accounts
+      # The least-privilege runtime role. DML on the three schemas, nothing
+      # else: no CREATEDB, no CREATEROLE, no BYPASSRLS, no CREATE anywhere.
+      - key: DATABASE_URL
+        sync: false
+      # The OWNER, direct (non-pooler) endpoint. Used ONLY to migrate, which
+      # on this plan happens from a laptop and not from Render -- so LEAVE IT
+      # UNSET here. Nothing at runtime reads it, and the owner credential not
+      # being in the service environment at all is strictly better than it
+      # sitting there unread. Set it only if migrating moves back to a
+      # preDeploy step on a paid plan.
+      - key: DATABASE_URL_ADMIN
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false          # e.g. https://collab-docs.onrender.com
+      # Google sign-in (ADR-020). The SAME value the static site compiles in as
+      # VITE_GOOGLE_CLIENT_ID, and it must be set on both: the browser presents
+      # the id to Google, and this server refuses any ID token that does not
+      # name it as its audience. Set on the client only and the button appears
+      # and /api/auth/google answers 501; set here only and nothing offers to
+      # sign in. Not a secret -- it ships in the bundle either way.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      # Redis. OPTIONAL -- unset is a supported configuration, and on a single
+      # instance the in-process fallback is faster (ADR-023). What it buys
+      # here is that the session cache and the rate-limit counters survive a
+      # restart, and a free instance restarts every time it is left idle.
+      #
+      # Both services share ONE instance and one key prefix on purpose: a
+      # session is valid on both, because a user is not engine-specific.
+      - key: REDIS_URL
+        sync: false
+      # PORT is provided by Render and read by backend/src/config.js.
+
+  # --- the OT server: the lab only, but fully implemented (ADR-009) --------
+  - type: web
+    name: collab-ot
+    runtime: node
+    plan: free
+    region: oregon
+    numInstances: 1
+    buildCommand: npm ci
+    # Deliberately absent: collab-yjs's preDeploy already created every
+    # schema, including `ot`. Two services migrating the same database on the
+    # same deploy is the catalogue race that ensureSchema's advisory lock
+    # exists for, and not racing at all is better than winning.
+    startCommand: npm start -w @collab/server -- --engine=ot
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: '24'
+      - key: ENGINE
+        value: ot
+      - key: DB_SCHEMA
+        value: ot
+      - key: ACCOUNTS_SCHEMA
+        value: accounts
+      - key: DATABASE_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Google sign-in (ADR-020). The SAME value the static site compiles in as
+      # VITE_GOOGLE_CLIENT_ID, and it must be set on both: the browser presents
+      # the id to Google, and this server refuses any ID token that does not
+      # name it as its audience. Set on the client only and the button appears
+      # and /api/auth/google answers 501; set here only and nothing offers to
+      # sign in. Not a secret -- it ships in the bundle either way.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      # Redis. OPTIONAL -- unset is a supported configuration, and on a single
+      # instance the in-process fallback is faster (ADR-023). What it buys
+      # here is that the session cache and the rate-limit counters survive a
+      # restart, and a free instance restarts every time it is left idle.
+      #
+      # Both services share ONE instance and one key prefix on purpose: a
+      # session is valid on both, because a user is not engine-specific.
+      - key: REDIS_URL
+        sync: false
+
+  # --- the client: a static bundle, no server, no secrets -----------------
+  - type: web
+    name: collab-client
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: NODE_VERSION
+        value: '24'
+      # PUBLIC. Compiled into the bundle and readable by anyone -- which is
+      # why only URLs live here. DATABASE_URL must never appear in a VITE_
+      # variable, or it ships to every visitor.
+      - key: VITE_API_URL_YJS
+        sync: false          # e.g. https://collab-yjs.onrender.com
+      - key: VITE_API_URL_OT
+        sync: false          # e.g. https://collab-ot.onrender.com
+      # Google, for Drive import. PUBLIC like the two above -- a client id, a
+      # browser API key and a project number all ship in the bundle by design,
+      # which is what makes them safe here and what makes DATABASE_URL not.
+      #
+      # Import is Drive-ONLY since ADR-021 was reversed, so without these three
+      # the Import dialog can do nothing but name what is missing. Restrict the
+      # API key to this site's referrer in the Google console; that, not
+      # secrecy, is what protects a browser key.
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+      - key: VITE_GOOGLE_API_KEY
+        sync: false
+      - key: VITE_GOOGLE_PROJECT_NUMBER
+        sync: false
+    routes:
+      # A single-page app: unknown paths are routes, not missing files.
+      - type: rewrite
+        source: /*
+        destination: /index.html

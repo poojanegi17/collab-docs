@@ -1,0 +1,61 @@
+/**
+ * The diagram vocabulary, shared by every page that draws one.
+ *
+ * Co-located with Diagram.jsx and imported BY it, so a route that renders a
+ * diagram gets its styles automatically. That matters now the long-form routes
+ * are code-split: these rules used to live in decisions.css, which only loads
+ * on /decisions -- so the moment /engines drew a diagram it would have arrived
+ * unstyled.
+ */
+/* ------------------------------------------------------------- diagrams -- */
+/*
+ * Six shapes, one palette. Colours come from the token set rather than being
+ * authored here, so a diagram cannot drift away from the page it sits on --
+ * and the accent that marks "this is the option taken" is the same accent
+ * every other control on the site uses for the same idea.
+ */
+
+.dia { font-family: var(--sans); overflow: visible; }
+
+.dia-box rect {
+  fill: #fff;
+  stroke: var(--line-bright);
+  stroke-width: 1;
+}
+/* The option taken, the source of a split, the step that does the work. */
+.dia-box.is-pick rect { fill: rgba(15, 118, 110, 0.10); stroke: var(--accent); }
+.dia-box.is-src rect { fill: rgba(20, 24, 35, 0.05); stroke: var(--line-bright); }
+.dia-box.is-alt rect { fill: rgba(162, 28, 175, 0.07); stroke: rgba(162, 28, 175, 0.42); }
+/* The option NOT taken. Kept legible: it is half the argument, so it is
+   dimmed rather than greyed out to the point of being unreadable. */
+.dia-box.is-drop rect { fill: rgba(20, 24, 35, 0.035); stroke-dasharray: 3 3; }
+.dia-box.is-drop .dia-t { fill: var(--fg-faint); }
+
+.dia-t { font-size: 9.5px; font-weight: 620; fill: var(--fg); text-anchor: middle; }
+/* `--fg-dim`, not `--fg-faint`. These sit inside the tinted boxes, which are
+   themselves on a wash, so the effective background is two tints darker than
+   the page -- and faint grey measured 3.9:1 there, under the 4.5:1 floor.
+   a11y-test.mjs skips anything over a gradient, which is all of this. */
+.dia-sub { font-size: 8px; fill: var(--fg-dim); text-anchor: middle; }
+.dia-mono { font-family: var(--mono); font-size: 11px; fill: var(--fg); text-anchor: middle; }
+/* `--fg-dim`, like the sub-labels and for the same reason: these captions sit
+   on a wash that is darker than the page the faint grey was tuned against, and
+   this one measured 4.28:1 there. Small italic text is the worst thing to make
+   the reader squint at. */
+.dia-note { font-size: 8.5px; fill: var(--fg-dim); text-anchor: middle; font-style: italic; }
+.dia-cap {
+  font-family: var(--mono); font-size: 8px; fill: var(--fg-faint);
+  letter-spacing: .06em; text-anchor: middle;
+}
+.dia-left { text-anchor: start; }
+
+.dia-arrow { stroke: var(--fg-faint); stroke-width: 1.1; }
+.dia-tip { fill: var(--fg-faint); }
+
+/* The seam itself: dashed, because it is an agreement rather than a thing. */
+.dia-seam { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.dia-seam-t { fill: var(--accent); }
+
+/* A log record. The marked ones are snapshots or checkpoints. */
+.dia-rec { fill: rgba(20, 24, 35, 0.06); stroke: var(--line-bright); stroke-width: 1; }
+.dia-rec.is-mark { fill: rgba(15, 118, 110, 0.16); stroke: var(--accent); }

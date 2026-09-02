@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 660" width="980" height="660" role="img" aria-labelledby="t d">
+<title id="t">The engine seam</title>
+<desc id="d">Two interchangeable concurrency engines, CRDT and OT, sit behind one interface on the client and one interface on the server. Every other layer -- the editor UI, presence, the transport, and storage -- is written once and works with either, because none of them can tell which engine produced the bytes passing through.</desc>
+
+<!--
+  Light background on purpose, not a theme bug.
+
+  This repository is light in both colour schemes by decision (a dark theme
+  is not something this project ships), and an SVG that flips with
+  prefers-color-scheme would be the one asset in the project that does not.
+  A fixed light panel is also the only version guaranteed legible in every
+  markdown renderer, several of which strip <style> out of SVG entirely.
+-->
+<rect width="980" height="660" fill="#f7f7f5"/>
+
+<defs>
+  <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0 0 L10 5 L0 10 z" fill="#4b515b"/>
+  </marker>
+  <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0 0 L10 5 L0 10 z" fill="#0f766e"/>
+  </marker>
+</defs>
+
+<g font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+
+  <text x="40" y="46" font-size="21" font-weight="700" fill="#141414">The engine seam</text>
+  <text x="40" y="70" font-size="13.5" fill="#4b515b">Everything outside the two dashed boxes is written once and runs under either engine.</text>
+
+  <!-- ============================ BROWSER ============================ -->
+  <text x="40" y="112" font-size="11" font-weight="700" letter-spacing="1.4" fill="#616a75">BROWSER</text>
+
+  <rect x="40" y="124" width="400" height="96" rx="10" fill="#ffffff" stroke="#d5d7db"/>
+  <text x="60" y="150" font-size="14" font-weight="600" fill="#141414">Editor UI</text>
+  <text x="60" y="172" font-size="12.5" fill="#4b515b">CodeMirror 6 · toolbar · marks.js · presence</text>
+  <text x="60" y="192" font-size="12.5" fill="#4b515b">comments · authorship · find &amp; replace</text>
+  <text x="60" y="210" font-size="11.5" font-style="italic" fill="#0f766e">takes a RichText — never a Y.Doc, never a revision</text>
+
+  <!-- client seam -->
+  <line x1="40" y1="248" x2="440" y2="248" stroke="#0f766e" stroke-width="2"/>
+  <text x="40" y="242" font-size="12" font-weight="700" fill="#0f766e">EditorSync</text>
+  <text x="440" y="242" font-size="11" fill="#0f766e" text-anchor="end">one interface</text>
+
+  <rect x="40" y="262" width="400" height="86" rx="10" fill="none" stroke="#0f766e" stroke-dasharray="5 4"/>
+  <rect x="56" y="278" width="176" height="54" rx="8" fill="#e8f2f0" stroke="#0f766e"/>
+  <text x="144" y="300" font-size="13" font-weight="600" fill="#0f766e" text-anchor="middle">YjsSync</text>
+  <text x="144" y="319" font-size="11" fill="#4b515b" text-anchor="middle">Y.Doc · IndexedDB</text>
+
+  <rect x="248" y="278" width="176" height="54" rx="8" fill="#f2eef7" stroke="#7c5cbf"/>
+  <text x="336" y="300" font-size="13" font-weight="600" fill="#5b3fa0" text-anchor="middle">OTSync</text>
+  <text x="336" y="319" font-size="11" fill="#4b515b" text-anchor="middle">rev · one op in flight</text>
+
+  <!-- ============================ SERVER ============================ -->
+  <text x="540" y="112" font-size="11" font-weight="700" letter-spacing="1.4" fill="#616a75">SERVER</text>
+
+  <rect x="540" y="124" width="400" height="96" rx="10" fill="#ffffff" stroke="#d5d7db"/>
+  <text x="560" y="150" font-size="14" font-weight="600" fill="#141414">Room / transport</text>
+  <text x="560" y="172" font-size="12.5" fill="#4b515b">rooms · presence relay · access checks</text>
+  <text x="560" y="192" font-size="12.5" fill="#4b515b">broadcast batching · JSON API</text>
+  <text x="560" y="210" font-size="11.5" font-style="italic" fill="#0f766e">routes opaque payloads — asks IF frames may merge</text>
+
+  <!-- server seam -->
+  <line x1="540" y1="248" x2="940" y2="248" stroke="#0f766e" stroke-width="2"/>
+  <text x="540" y="242" font-size="12" font-weight="700" fill="#0f766e">DocEngine</text>
+  <text x="940" y="242" font-size="11" fill="#0f766e" text-anchor="end">one interface</text>
+
+  <rect x="540" y="262" width="400" height="86" rx="10" fill="none" stroke="#0f766e" stroke-dasharray="5 4"/>
+  <rect x="556" y="278" width="176" height="54" rx="8" fill="#e8f2f0" stroke="#0f766e"/>
+  <text x="644" y="300" font-size="13" font-weight="600" fill="#0f766e" text-anchor="middle">YjsEngine</text>
+  <text x="644" y="319" font-size="11" fill="#4b515b" text-anchor="middle">relays bytes it never reads</text>
+
+  <rect x="748" y="278" width="176" height="54" rx="8" fill="#f2eef7" stroke="#7c5cbf"/>
+  <text x="836" y="300" font-size="13" font-weight="600" fill="#5b3fa0" text-anchor="middle">OTEngine</text>
+  <text x="836" y="319" font-size="11" fill="#4b515b" text-anchor="middle">owns the document</text>
+
+  <!-- the wire -->
+  <rect x="300" y="386" width="380" height="62" rx="10" fill="#ffffff" stroke="#4b515b"/>
+  <text x="490" y="410" font-size="13" font-weight="600" fill="#141414" text-anchor="middle">shared/protocol — the wire</text>
+  <text x="490" y="430" font-size="11.5" fill="#4b515b" text-anchor="middle">one envelope, one sub-protocol per engine</text>
+
+  <path d="M200 348 L200 367 L296 367 L296 386" fill="none" stroke="#4b515b" stroke-width="1.6" marker-end="url(#a)"/>
+  <path d="M700 348 L700 367 L684 367 L684 386" fill="none" stroke="#4b515b" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="490" y="362" font-size="10.5" fill="#616a75" text-anchor="middle">WebSocket</text>
+
+  <!-- ============================ STORAGE ============================ -->
+  <!-- From the ENGINES, not from the wire: an engine persists the bytes it
+       produced. The transport never writes to storage. -->
+  <path d="M886 348 L886 486" fill="none" stroke="#4b515b" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="896" y="420" font-size="10.5" fill="#616a75">persist</text>
+
+  <rect x="540" y="486" width="400" height="108" rx="10" fill="#ffffff" stroke="#d5d7db"/>
+  <text x="560" y="512" font-size="14" font-weight="600" fill="#141414">Store — Postgres</text>
+  <text x="560" y="534" font-size="12.5" fill="#4b515b">update log · snapshots · archive · ACL</text>
+  <text x="560" y="554" font-size="12.5" fill="#4b515b">documents · comments · tabs · tasks · search index</text>
+  <text x="560" y="576" font-size="11.5" font-style="italic" fill="#0f766e">stores engine bytes it cannot interpret — which is why</text>
+  <text x="560" y="590" font-size="11.5" font-style="italic" fill="#0f766e">adding a second engine changed nothing here</text>
+
+  <!-- the two facts the seam buys, called out -->
+  <rect x="40" y="486" width="400" height="108" rx="10" fill="#fdf6e7" stroke="#c9a227"/>
+  <text x="60" y="508" font-size="13" font-weight="600" fill="#141414">Where the engines actually differ</text>
+  <text x="60" y="534" font-size="11.5" fill="#616a75">offline edits</text>
+  <text x="60" y="552" font-size="11.5" fill="#616a75">comment anchors</text>
+  <text x="60" y="570" font-size="11.5" fill="#616a75">authorship</text>
+  <text x="60" y="588" font-size="11.5" fill="#616a75">scale-out</text>
+
+  <text x="176" y="534" font-size="11.5" fill="#0f766e">merged</text>
+  <text x="176" y="552" font-size="11.5" fill="#0f766e">need no owner</text>
+  <text x="176" y="570" font-size="11.5" fill="#0f766e">free</text>
+  <text x="176" y="588" font-size="11.5" fill="#0f766e">route anywhere</text>
+
+  <text x="288" y="534" font-size="11.5" fill="#5b3fa0">discarded on reconnect</text>
+  <text x="288" y="552" font-size="11.5" fill="#5b3fa0">server owns them</text>
+  <text x="288" y="570" font-size="11.5" fill="#5b3fa0">a parallel array</text>
+  <text x="288" y="588" font-size="11.5" fill="#5b3fa0">one writer per doc</text>
+
+  <text x="176" y="518" font-size="10" font-weight="700" letter-spacing="0.8" fill="#0f766e">CRDT</text>
+  <text x="288" y="518" font-size="10" font-weight="700" letter-spacing="0.8" fill="#5b3fa0">OT</text>
+
+  <text x="40" y="626" font-size="11.5" fill="#616a75">Documents on the site are CRDT-only (ADR-009). The lab at /lab is where the two are switched and compared.</text>
+  <text x="40" y="646" font-size="11.5" fill="#616a75">ADR-002 is the seam · ADR-004 is the OT engine · ADR-012, ADR-016 and ADR-018 are where they diverge.</text>
+</g>
+</svg>

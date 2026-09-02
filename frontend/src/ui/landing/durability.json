@@ -1,0 +1,16 @@
+{
+  "charsWritten": 1170,
+  "charsBeforeKill": 840,
+  "charsWrittenOffline": 330,
+  "charsRecovered": 1170,
+  "charsLost": 0,
+  "recoveryMs": 18286.2,
+  "coldClientAgrees": true,
+  "updates": 50,
+  "signal": "SIGKILL",
+  "bytesStored": 1939,
+  "measuredOn": {
+    "date": "2026-09-01",
+    "node": "v24.16.0"
+  }
+}

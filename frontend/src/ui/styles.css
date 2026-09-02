@@ -1,0 +1,3298 @@
+/**
+ * The app's token set, sharing the landing page's visual language.
+ *
+ * The tokens describe the same light, papery world the mosaic lives in, and
+ * theme.css carries the card washes that go on top. An instrument aesthetic
+ * -- dark-first, high contrast, no shadows -- reads well on its own and looks
+ * like a different product from the landing page it sits behind, which is the
+ * one thing a single app cannot afford.
+ *
+ * LIGHT ONLY, deliberately. The landing mosaic is light in both colour
+ * schemes -- its panels are pastel gradients, and there is no dark equivalent
+ * of them that is still recognisably the same design. Keeping a dark variant
+ * for the rest of the app would mean the two halves of the product diverge
+ * for anyone whose system is set to dark, which is the split this token set
+ * exists to close.
+ *
+ * Throughout: prose is sans, every number and machine state is mono and
+ * tabular. That is what makes the inspector readable as
+ * instrumentation rather than decoration -- values line up and stop jittering
+ * as they change.
+ */
+
+:root {
+  --bg: #f0f0f0;
+  --surface: #ffffff;
+  --surface-2: #f5f6f8;
+  --fg: #141414;
+  /* Also darkened: at 4.41:1 it failed on the densest body text in the
+     product -- the striped rows of a measurement table. */
+  --fg-dim: #4b515b;
+  /* Darkened from #8a9099, which measured 3.2:1 on white -- under the 4.5:1
+     WCAG AA floor, and it was used for roughly every secondary label in the
+     product. `tools/a11y-test.mjs` is what turned that from an opinion about
+     grey into a number.
+
+     The value clears 4.5:1 on the PAGE background (#f0f0f0, 4.8:1), not only
+     on white -- the first attempt cleared it on white at 4.8:1 and failed at
+     4.2:1 everywhere the surface was tinted, which is most of the product. */
+  --fg-faint: #616a75;
+
+  /* Hairlines are translucent ink rather than a flat grey, so they sit
+     correctly on white, on the pastel washes, and on the page alike. */
+  --line: rgba(20, 24, 35, 0.09);
+  --line-bright: rgba(20, 24, 35, 0.16);
+
+  /* Darkened from #0d9488 for the same reason: it is both a text colour on
+     white and the background of `.primary-btn` under white text, and it
+     measured 3.74:1 in BOTH directions. This clears 4.5:1 either way. */
+  --accent: #0f766e;
+  /* Status colours, darkened so they are legible AS TEXT.
+     They were picked to read as status DOTS against the page, where only hue
+     matters, and then reused for small labels -- "accepted", "1.2x", the
+     timeline's direction arrows -- where they measured 3.1:1 to 4.0:1 on
+     white. Every one of them now clears 4.5:1 on the page background as well
+     as on white. A dot does not care that its green got darker; the word next
+     to it does. */
+  --ok: #1f6b42;
+  --warn: #8a5e00;
+  --busy: #9a4f12;
+  --bad: #a32f2b;
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  /* Plus Jakarta Sans is the landing page's face. It is loaded at runtime by
+     useDisplayFont(); the stack below is what renders until it arrives, and
+     what renders forever if the request fails. */
+  --sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --header-h: 48px;
+  --inspector-w: 268px;
+}
+
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+
+.app {
+  display: grid;
+  grid-template-rows: var(--header-h) 1fr;
+  /* One column, and it may not be widened by its contents.
+     A grid track sized `auto` grows to its widest item's min-content width, so
+     the header -- a row of buttons that does not wrap -- was quietly setting
+     the width of the whole application, and every row below it inherited that
+     width. On a phone the result was a page 719px wide inside a 412px window,
+     scrolling sideways with the document half off-screen.
+     `minmax(0, 1fr)` says: exactly the available width, never more. */
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+}
+/* Three rows now: header, body, status bar. The status bar was a child of the
+   editor column and stopped where that column stopped, so the side panes ran
+   past it. It spans the window, so it is a row of the window's grid.
+   `minmax(0, 1fr)` on the body for the usual reason -- a `1fr` track floors at
+   its content's min-content height, and the body would then push the status
+   bar off the bottom of a short viewport instead of scrolling inside itself. */
+.app { grid-template-rows: var(--header-h) minmax(0, 1fr) auto; }
+
+/* ---------------------------------------------------------------- header -- */
+
+/* Chrome floats over the page rather than sitting on a slab of surface
+   colour, which is what makes the document below read as paper on a desk.
+
+   ONE rule, not two. This was authored as a second `.header` block layering
+   the floating treatment over the original, and the original was left below
+   it -- so `background: var(--surface)` won on source order and the header
+   rendered as a flat white slab with the blur doing nothing. The page behind
+   it is #f0f0f0, so a white bar reads as a different material from the
+   landing page it came from, which is the whole thing this is meant to
+   match. Merged, with the intended values kept. */
+.header {
+  /* A grid item defaults to `min-width: auto` and can therefore overflow its
+     track. The header is a non-wrapping row of buttons, so without this it
+     sets the width of the whole app on any screen too narrow to hold it. */
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(240, 240, 240, 0.86);
+  backdrop-filter: blur(10px);
+}
+
+.doc-title {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+/* A pill, like every other small label on the landing page and /docs.
+   One rule, not a base plus an override: source order decides which radius
+   wins, and a `3px` sitting below this would quietly square the badges off. */
+.badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--fg-dim);
+}
+.badge-engine { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+
+.header-spacer { flex: 1; }
+
+/* Who this tab is. Mono, because it is identity data, not prose. */
+.whoami {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-dim);
+  cursor: default;
+}
+.whoami-swatch { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+
+/* A guest is an editor the document cannot name, and the label should read
+   that way rather than as somebody with an unusual name. Quieter than a real
+   identity, italic, and never bold. */
+.whoami-guest { color: var(--fg-faint); font-style: italic; }
+
+/* Overlapping avatar stack. Self is always last and outlined. */
+.avatars { display: flex; align-items: center; padding-left: 6px; }
+.avatar {
+  width: 24px; height: 24px;
+  margin-left: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: #06090c;
+  cursor: default;
+}
+.avatar-self { box-shadow: 0 0 0 1px var(--line-bright); }
+
+/* Status pill: the dot is reality, the label is intent. They differ while
+   reconnecting, and showing both is more honest than picking one. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-bright);
+  border-radius: 4px;
+  color: var(--fg-dim);
+  transition: border-color .12s, color .12s;
+}
+.status { border-radius: 999px; background: #fff; box-shadow: var(--card-shadow); }
+.status:hover { border-color: var(--accent); color: var(--fg); }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg-faint); flex: none; }
+.status-synced .dot { background: var(--ok); }
+.status-connected .dot { background: var(--warn); }
+.status-connecting .dot, .status-reconnecting .dot { background: var(--busy); animation: pulse 1s ease-in-out infinite; }
+.status-offline .dot { background: var(--bad); }
+@keyframes pulse { 50% { opacity: .3; } }
+
+.icon-btn {
+  display: grid; place-items: center;
+  width: 28px; height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--fg-dim);
+}
+.icon-btn:hover { border-color: var(--line-bright); color: var(--fg); }
+.icon-btn[aria-pressed="true"] { color: var(--accent); }
+
+/* ------------------------------------------------------------------ body -- */
+
+/* Flex, not a two-column grid.
+   The grid hard-coded "editor plus one panel", so opening version history
+   added a third child with nowhere to go and the inspector fell out of the
+   row entirely. Flex takes any number of panels. */
+.body {
+  display: flex;
+  min-height: 0;
+  /* A grid item defaults to `min-width: auto`, which means "at least my
+     content's min-content width" -- so this row silently stretched to fit the
+     toolbar and the inspector instead of constraining them, and the whole page
+     scrolled sideways on a phone. Nothing inside here should ever widen the
+     app. */
+  min-width: 0;
+}
+.body > .editor-pane { flex: 1 1 auto; }
+
+/* A column now: the toolbar sits above the page, and the editor below it
+   stays centred at its reading width. */
+.editor-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  padding: 0 0 0;
+}
+/* The document is a STACK of sheets, not one sheet that grows downwards.
+   See pagination.js: that file decides where the text breaks, this one draws
+   the paper it breaks onto. Both work off the same custom properties, which
+   the editor sets from the constants pagination.js exports.
+
+   The container itself is transparent and carries no border, radius or
+   shadow. The sheets are painted on the content below, and a card treatment
+   here would draw one more rectangle around all of them.
+
+   Scoped away from the lab. Its panes are laid out by a grid that expects the
+   editor to fill its cell, and the paper's auto margins and flex sizing would
+   collapse every replica to a single visible line. */
+.editor-paged {
+  width: 100%;
+  max-width: var(--page-w);
+  margin: 14px auto 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  background: transparent;
+}
+
+/* The document scrolls exactly as far as it has pages, and no further.
+   A tall pad here would let the scroll run on past the bottom of the last
+   sheet into a band where the page is over and no next page has begun; that
+   space says "there is more below" and there is not.
+
+   One gap's worth is kept, which is not dead space: it is the same channel
+   that sits between any two sheets, so the end of the document looks like the
+   end of a page rather than paper jammed against the window edge. Everything
+   past it appears by adding a page, which is what a new page is FOR. */
+.editor-paged .cm-scroller { padding-bottom: var(--page-gap); }
+
+/* The sheets.
+   A background rather than elements: a page is scenery. It is not in the
+   document, it cannot be selected, and drawing it as a real node per page
+   would add DOM that exists only to be white.
+
+   Two layers, painted top to bottom in this order:
+     1. a hairline along the top and bottom edge of every sheet, so a page
+        reads as a bounded object and not as a gap in a white column;
+     2. the sheets themselves -- white for a page, transparent for the gap,
+        which lets the desk colour through.
+
+   The period is one page plus one gap, which is exactly the distance
+   pagination.js advances by when it starts a new page. */
+.editor-paged .cm-content {
+  padding: var(--page-margin) var(--page-margin) 0;
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      var(--line) 0, var(--line) 1px,
+      transparent 1px,
+      transparent calc(var(--page-h) - 1px),
+      var(--line) calc(var(--page-h) - 1px), var(--line) var(--page-h),
+      transparent var(--page-h),
+      transparent calc(var(--page-h) + var(--page-gap))
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      #fff 0, #fff var(--page-h),
+      transparent var(--page-h),
+      transparent calc(var(--page-h) + var(--page-gap))
+    );
+}
+
+/* The break itself is empty space. It is a block widget so that it takes part
+   in the height map -- see pagination.js -- and it must not paint, because the
+   sheets behind it already say where the page ended. */
+.cm-page-break { width: 100%; pointer-events: none; }
+
+.editor-compact { width: 100%; height: 100%; min-height: 0; background: #fff; }
+
+.cm-editor { height: 100%; background: transparent; }
+.cm-editor.cm-focused { outline: none; }
+.cm-scroller { overflow: auto; }
+.cm-content { caret-color: var(--accent); }
+.cm-cursor { border-left-color: var(--accent); }
+
+/* ------------------------------------------------------------- inspector -- */
+
+/* Sky, because that is what instrumentation is washed in.
+   The lab already made that choice -- `.server-head` is `wash-sky` -- and the
+   inspector is the same kind of surface: the panel that tells you what the
+   machine currently believes. Matching it means the two debug surfaces in the
+   product read as one thing rather than as two panels that happen to be next
+   to different editors.
+
+   The wash replaces a translucent white that was left over from the
+   dark-first design. On a #f0f0f0 page it read as "white panel", which is the
+   one thing the landing page never does.
+
+   Scrimmed, and this one is not a matter of taste. Sky ends at #cedce4, and
+   `--fg-faint` -- the colour of every section title in here -- measures
+   3.92:1 against it. The token set is tuned to clear 4.5:1 (see the note on
+   --fg-faint), so an unscrimmed sky would have put the inspector's own labels
+   under the floor the rest of the product holds. `tools/a11y-test.mjs` does
+   not catch it: it skips text over gradients, which is exactly what this is.
+   With the scrim the same text measures 4.9:1. */
+.inspector {
+  width: var(--inspector-w);
+  border-left: 1px solid var(--line);
+  background-image: linear-gradient(var(--wash-scrim), var(--wash-scrim)), var(--wash-sky);
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.inspector-collapsed { width: 0; border-left: none; overflow: hidden; }
+
+.section { border-bottom: 1px solid var(--line); padding: 10px 12px; }
+.section-title {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--fg-faint);
+  margin-bottom: 8px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+  color: var(--fg-dim);
+}
+.row-value {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.row-value-accent { color: var(--accent); }
+
+/* Meter for the compaction threshold -- the one value with a known ceiling. */
+.meter { height: 3px; background: var(--surface-2); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.meter-fill { height: 100%; background: var(--accent); transition: width .2s; }
+
+/* OT state machine. The active state is the only lit one, which makes the
+   transition through awaitingWithBuffer visible as you type. */
+.machine { display: flex; flex-direction: column; gap: 3px; margin-top: 2px; }
+.machine-state {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--fg-faint);
+}
+.machine-state-active {
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.machine-state-active .machine-dot { background: var(--accent); }
+.machine-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--line-bright); flex: none; }
+
+.op-preview {
+  margin-top: 6px;
+  padding: 5px 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  color: var(--fg-dim);
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.peer-row { display: flex; align-items: center; gap: 7px; padding: 3px 0; }
+.peer-swatch { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+.peer-name { flex: 1; color: var(--fg); }
+.peer-pos { color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+
+.empty { color: var(--fg-faint); padding: 2px 0; }
+
+.hint {
+  padding: 10px 12px;
+  color: var(--fg-faint);
+  line-height: 1.5;
+  font-family: var(--sans);
+}
+
+/* ------------------------------------------------------------ peer carets -- */
+
+.cm-peer-caret {
+  position: relative;
+  border-left: 2px solid;
+  margin-left: -1px;
+  height: 1.2em;
+  display: inline-block;
+  vertical-align: text-bottom;
+}
+.cm-peer-label {
+  position: absolute;
+  top: -1.35em;
+  left: -2px;
+  font-family: var(--mono);
+  font-size: 9px;
+  line-height: 1.4;
+  padding: 0 4px;
+  border-radius: 2px 2px 2px 0;
+  color: #06090c;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .inspector { position: absolute; right: 0; top: var(--header-h); bottom: 0; }
+}
+
+/* ==================================================================== lab == */
+/*
+   The lab reads as a PAGE, not a cockpit.
+
+   A strip of unlabelled buttons above four dense panels, pinned to the
+   viewport with no title, is a fine shape for an instrument you already know
+   how to fly and a hostile one for everybody else -- and this is the page most
+   likely to be someone's first contact with the ideas in it.
+
+   So: a title block, one grouped bar of controls, then the replicas and the
+   two observers, all wearing the landing page's card treatment. The page
+   scrolls rather than compressing, because eight replicas and two data panels
+   do not fit in a viewport and pretending otherwise only makes every panel too
+   short to read.
+*/
+
+.lab {
+  min-height: 100%;
+  overflow-y: auto;
+  background: var(--bg);
+  padding: 0 20px 32px;
+}
+
+/* One column for everything, wide enough for four panes across. */
+.lab-hero,
+.lab-nav,
+.lab-say,
+.glossary,
+.lab-body { max-width: 1440px; margin-inline: auto; }
+
+/* ---- title block ---- */
+
+.lab-hero {
+  position: relative;
+  text-align: center;
+  padding: 26px 0 18px;
+}
+.lab-back {
+  position: absolute;
+  left: 0;
+  top: 30px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  text-decoration: none;
+}
+.lab-back:hover { color: var(--fg); }
+
+.lab-hero-mid { display: inline-block; max-width: 660px; }
+
+/*
+   Display type, matching the landing mosaic's headline: 800 weight, tight
+   tracking, a short coloured phrase in front of the claim. The page had the
+   right typeface all along and was setting it at body weight, which is why it
+   read as a route label rather than as a title.
+*/
+.lab-title {
+  margin: 0;
+  font-size: clamp(30px, 3.4vw, 46px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  color: #0d0d0d;
+}
+.lab-title-tint { color: var(--accent); }
+
+.lab-lede {
+  margin: 15px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--fg-dim);
+}
+
+/* ---- the control bar ---- */
+
+.lab-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 22px;
+  padding: 13px 16px;
+}
+/*
+   Washed, not white. `.wash` in theme.css brings the border, radius and
+   shadow, so this rule only owns layout -- the same split the landing panels
+   use.
+*/
+
+/*
+   Groups, each with a label saying what it is for. In one undifferentiated
+   row, the only way to learn which of "reset" and "start over" is the
+   destructive one is to press it.
+*/
+.nav-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.nav-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  /* Dim, not faint: this sits on the cream wash now, where the faint grey
+     drops under the 4.5:1 floor -- and text on a gradient is exactly what
+     tools/a11y-test.mjs reports as unmeasurable rather than checking. */
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+.nav-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* The document group is the one that should give up width first. */
+.nav-doc { flex: 1 1 240px; min-width: 0; }
+.nav-doc .nav-row { flex-wrap: nowrap; min-width: 0; }
+.nav-doc .doc-title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.nav-scenario { margin-left: auto; }
+
+.lab-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 5px 9px;
+  /* White, not transparent: these sit on a wash now, and a see-through button
+     reads as a label rather than as a control. */
+  background: rgba(255, 255, 255, .72);
+  border: 1px solid var(--line-bright);
+  border-radius: 7px;
+  color: var(--fg-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .12s, color .12s, background .12s;
+}
+.lab-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--fg); background: #fff; }
+.lab-btn:disabled { opacity: .35; cursor: not-allowed; }
+.lab-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.lab-btn-accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+/* Throws the document away. Stated by being quieter, not louder. */
+.lab-btn-quiet { color: var(--fg-faint); }
+
+/* The scenario trigger: filled, because it is the one control on the bar that
+   takes the page over for ten seconds. */
+.lab-btn-run {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.lab-btn-run:hover:not(:disabled) { background: #0b5f59; border-color: #0b5f59; color: #fff; }
+.lab-btn-run.is-running { background: var(--bad); border-color: var(--bad); }
+.lab-btn-run.is-running:hover { background: #8c2724; border-color: #8c2724; color: #fff; }
+
+/* ---- narration ---- */
+
+.lab-say {
+  margin-top: 8px;
+  padding: 0 4px;
+  min-height: 19px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 19px;
+  color: var(--fg-faint);
+}
+.lab-say-live { color: var(--accent); }
+.say-step {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- glossary ---- */
+
+/* Last thing on the page: you come down here when a word above stopped you. */
+.glossary { margin-top: 16px; overflow: hidden; }
+.glossary-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #2f3a2a;
+  cursor: pointer;
+  text-align: left;
+}
+.glossary-toggle:hover { color: #0d0d0d; }
+.glossary-toggle:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
+.glossary-q {
+  display: grid;
+  place-items: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  flex: none;
+}
+.glossary-toggle-text { flex: 1; }
+.glossary-caret { font-family: var(--mono); color: #4d5546; font-size: 15px; }
+
+.glossary-list {
+  margin: 0;
+  padding: 12px 14px 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px 22px;
+  border-top: 1px solid rgba(20, 24, 35, .10);
+}
+.glossary-item { min-width: 0; }
+.glossary-item dt {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #2b6152;
+  margin-bottom: 3px;
+}
+.glossary-item dd { margin: 0; font-size: 12.5px; line-height: 1.5; }
+.glossary-item dd b { display: block; font-weight: 700; color: #10140f; }
+/* Darker than --fg-dim: this is prose on the lime wash, not on the page. */
+.glossary-item dd span { color: #414a3c; }
+
+/* ---- body ---- */
+
+.lab-body { display: block; margin-top: 14px; }
+
+.panes-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 4px 8px;
+  flex-wrap: wrap;
+}
+.panes-head .section-title { margin: 0; }
+.lab-subject { font-size: 12.5px; color: var(--fg-faint); }
+
+/* Panes: two across, wrapping to a second row for 3-4 replicas. */
+.panes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 0;
+}
+.panes[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
+/*
+   Past four replicas, two columns leaves four tall rows you have to scroll
+   through -- and a partition demo you have to scroll is a partition demo
+   nobody can follow. Widen instead, and let the panes get shorter.
+*/
+.panes[data-count="5"],
+.panes[data-count="6"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.panes[data-count="7"],
+.panes[data-count="8"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.pane {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  overflow: hidden;
+  min-height: 372px;
+  min-width: 0;
+}
+.panes[data-count="1"] .pane { min-height: 400px; }
+.panes[data-count="7"] .pane,
+.panes[data-count="8"] .pane { min-height: 340px; }
+
+/* A cut-off pane should look wrong at a glance, without being unreadable. */
+.pane-partitioned { background: color-mix(in srgb, var(--bad) 5%, #fff); }
+
+/*
+   The focused replica -- the one the timeline is filtered to. An inset ring
+   rather than a border, so nothing reflows when focus moves between panes.
+*/
+.pane-focused {
+  box-shadow: var(--card-shadow), inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* No background rule here on purpose: `.pane-head` carries an inline colour
+   per replica, and inline wins. The inset ring is the focus signal. */
+
+.pane-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+/* On a tinted head, the faint grey loses too much. */
+.pane-head .pane-kind,
+.pane-head .pane-status { color: var(--fg-dim); }
+/* The identity doubles as the focus control. */
+.pane-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 5px;
+  margin: -2px 0 -2px -5px;
+  background: none;
+  border: 0;
+  border-radius: 5px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-width: 0;
+}
+.pane-id:hover { background: rgba(20, 24, 35, .05); }
+.pane-id:focus-visible { outline: 1px solid var(--accent); outline-offset: 0; }
+.pane-id[aria-pressed="true"] .pane-kind { color: var(--accent); }
+.pane-kind {
+  color: var(--fg-faint);
+  letter-spacing: .06em;
+  font-size: 9.5px;
+  text-transform: uppercase;
+}
+.pane-name { color: var(--fg); }
+.pane-warn {
+  color: var(--bad);
+  border: 1px solid color-mix(in srgb, var(--bad) 45%, transparent);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+.pane-status { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-dim); }
+
+/* Close. Quiet until the pane is hovered -- a rare action sitting on a header
+   you click for something else entirely.
+
+   `.replica-close`, not `.pane-close`: the comments and history sidebars
+   already own that name, and this rule sets `opacity` where theirs does not,
+   so sharing it faded their close button on every other page. */
+.replica-close {
+  display: grid;
+  place-items: center;
+  width: 20px; height: 20px;
+  flex: none;
+  background: none;
+  border: 0;
+  border-radius: 5px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--fg-faint);
+  cursor: pointer;
+  opacity: .45;
+  transition: opacity .12s, color .12s, background .12s;
+}
+.pane:hover .replica-close { opacity: 1; }
+.replica-close:hover { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
+.replica-close:focus-visible { opacity: 1; outline: 1px solid var(--accent); }
+
+/* The editor is the row that should get the leftover space, and it was
+   getting the scraps: head, meta and four network controls are all fixed
+   height, so a short pane squeezed the one part you actually type into. */
+.pane-editor { min-height: 110px; overflow: auto; }
+.pane-editor .editor { max-width: none; }
+
+.pane-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--fg-faint);
+  background: var(--surface-2);
+}
+
+/* ---- per-replica network ---- */
+
+.net {
+  display: grid;
+  gap: 3px;
+  padding: 7px 10px 9px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.net-head {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.net-row { display: grid; grid-template-columns: 1fr 46px; align-items: center; gap: 1px 8px; }
+.net-label {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--fg-dim);
+  min-width: 0;
+}
+/* The plain-English gloss. The real term keeps the emphasis; this explains it. */
+.net-hint {
+  font-family: var(--sans);
+  font-style: normal;
+  font-size: 10px;
+  color: var(--fg-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.net-value {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--fg-dim);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.net input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line-bright);
+  outline: none;
+}
+.net input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+}
+.net input[type="range"]::-moz-range-thumb {
+  width: 11px; height: 11px; border: 0; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+}
+.net input[type="range"]:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
+
+.net-partition {
+  margin-top: 3px;
+  padding: 5px;
+  background: none;
+  border: 1px solid var(--line-bright);
+  border-radius: 7px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.net-partition:hover { border-color: var(--bad); color: var(--fg); }
+.net-partition:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.net-partition-on {
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+  border-color: color-mix(in srgb, var(--bad) 50%, transparent);
+  color: var(--bad);
+}
+
+/* ---- bottom row: what the replicas saw | what the room knows ---- */
+
+.lab-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 330px);
+  gap: 12px;
+  margin-top: 14px;
+  min-height: 0;
+}
+
+.timeline,
+.server-view {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--surface);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  min-height: 0;
+  height: 380px;
+}
+
+/* Both panels lead with a title and a line saying what they show. */
+.panel-title { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; min-width: 0; }
+.panel-title .section-title { margin: 0; }
+.panel-sub { font-size: 11.5px; color: var(--fg-faint); }
+
+/*
+   Colour goes on the chrome; the bodies below stay white.
+
+   Not timidity -- the dense mono in these panels is the content of the page,
+   and `effectiveBackground()` in tools/a11y-test.mjs returns null the moment a
+   gradient appears in the ancestor chain, so every row would become
+   "unmeasurable" instead of checked. Tinting the headers buys the colour
+   without trading away the contrast guarantee on the rows carrying the data.
+   The landing does the same: its lime panel holds white cards for the text.
+*/
+.timeline-head,
+.server-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  /* No background here: the wash class on the element supplies it. styles.css
+     is imported after theme.css, so a background declared here silently beat
+     `.wash-blush` / `.wash-sky` and the headers came out grey. */
+  flex-wrap: wrap;
+}
+/* On a wash, the faint grey is not enough. */
+.timeline-head .section-title,
+.server-head .section-title,
+.timeline-head .panel-sub,
+.server-head .panel-sub,
+.timeline-head .timeline-count,
+.timeline-head .timeline-toggle { color: var(--fg-dim); }
+.timeline-count {
+  font-family: var(--mono); font-size: 10px; color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+}
+.timeline-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 10px; color: var(--fg-dim);
+  cursor: pointer;
+}
+.timeline-body { overflow-y: auto; padding: 4px 0; }
+
+.tl-row {
+  display: grid;
+  grid-template-columns: 64px 8px 54px 14px 88px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 12px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+  cursor: pointer;
+  text-align: left;
+}
+.tl-row:hover { background: var(--surface-2); }
+.tl-row:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.tl-dropped { opacity: .45; text-decoration: line-through; }
+
+.tl-swatch { width: 7px; height: 7px; border-radius: 2px; }
+.tl-client { color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; }
+.tl-dir-out { color: var(--accent); }
+.tl-dir-in { color: var(--warn); }
+.tl-kind { color: var(--fg); }
+.tl-kind-presence, .tl-kind-debug { color: var(--fg-faint); }
+.tl-kind-resync, .tl-kind-init { color: var(--warn); }
+.tl-detail { overflow: hidden; text-overflow: ellipsis; color: var(--fg-faint); }
+.tl-bytes { color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.tl-lost { color: var(--bad); }
+.tl-time { color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+
+/* The arrow key in the timeline header. Darker than the arrows in the rows
+   below: those sit on white, these sit on the blush wash, where --accent is
+   4.20:1 and --warn is 4.38:1. */
+.tl-key { font-family: var(--mono); }
+.tl-key-out { color: #0b5f59; }
+.tl-key-in { color: #6b4a00; }
+
+/* Replica filter chips in the timeline header. */
+.tl-filter { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.tl-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-family: var(--mono);
+  font-size: 10px;
+  /* Dim, not faint: these moved onto the blush header, where faint grey is
+     4.21:1 -- under the floor, and on a gradient, so a11y-test cannot see it. */
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.tl-chip:hover { color: var(--fg); border-color: var(--line-bright); }
+.tl-chip:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.tl-chip.on {
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.server-stale {
+  font-family: var(--mono); font-size: 10px;
+  /* Darker than --warn, which measures 4.07:1 on the sky wash this header
+     carries. Still unmistakably a warning colour. */
+  color: #6b4a00;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.server-body {
+  overflow-y: auto;
+  padding: 8px 12px 12px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+/* Dimmed, not hidden: the last known answer is still the most useful thing on
+   screen, it is just no longer current. */
+.server-body-stale { opacity: .5; }
+
+.server-row {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 2px 0;
+}
+.server-label { color: var(--fg-faint); min-width: 84px; }
+.server-value {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.server-sep {
+  margin: 9px 0 4px;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  color: var(--fg-faint);
+}
+.server-preview {
+  margin-top: 7px;
+  padding: 6px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--fg-dim);
+  max-height: 62px;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.server-empty { color: var(--fg-faint); font-style: italic; }
+
+/* The server's ordering decisions, newest first. */
+.xform-list { display: grid; gap: 1px; }
+.xform {
+  display: grid;
+  grid-template-columns: 34px 42px 52px 26px 1fr;
+  gap: 6px;
+  align-items: baseline;
+  padding: 1px 0;
+  color: var(--fg-faint);
+  white-space: nowrap;
+}
+/* A transform that had to move past concurrent work: the only rows here that
+   show OT doing the job it exists for. */
+.xform-hot .xform-against { color: var(--accent); }
+.xform-hot .xform-rev { color: var(--fg); }
+.xform-rev { color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.xform-by { color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; }
+.xform-op { overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 1100px) {
+  .panes[data-count="5"],
+  .panes[data-count="6"],
+  .panes[data-count="7"],
+  .panes[data-count="8"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nav-scenario { margin-left: 0; }
+}
+
+@media (max-width: 900px) {
+  .lab { padding: 0 12px 24px; }
+  .lab-back { position: static; display: inline-block; margin-bottom: 10px; }
+  .lab-hero { text-align: left; padding-top: 20px; }
+  .lab-hero h1 { font-size: 30px; }
+  .lab-hero-mid { display: block; }
+  .panes,
+  .panes[data-count="5"],
+  .panes[data-count="6"],
+  .panes[data-count="7"],
+  .panes[data-count="8"] { grid-template-columns: minmax(0, 1fr); }
+  /* Stack the two bottom panels rather than squeezing both into a phone. */
+  .lab-bottom { grid-template-columns: minmax(0, 1fr); }
+  .timeline, .server-view { height: auto; max-height: 340px; }
+  .tl-row { grid-template-columns: 58px 8px 48px 14px 76px 1fr auto auto; }
+}
+
+/* ================================================================ landing == */
+/*
+   The landing page's own styles live in ui/landing/mosaic.css. Nothing for it
+   is kept here: dead CSS still ships to every visitor, and this file is
+   against a size budget (tools/bundle-budget.mjs).
+
+   The one landing rule in this file is the account chip's weight override,
+   further down with the account bar itself, because that is where the rule it
+   overrides lives.
+*/
+
+/* ---- formatting -----------------------------------------------------------
+   Two layers, matching marks.js: inline marks over character ranges, and line
+   decorations driven by attributes carried on each line's trailing newline.
+   Everything here is engine-agnostic -- the same CSS renders CRDT and OT. */
+
+/* A floating pill over the page, sized to the paper below it. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  min-height: 40px;
+  justify-content: center;
+  padding: 5px 12px;
+  margin: 12px auto 0;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  border: var(--card-border);
+  /* A pill until it wraps: a two-row pill with 999px corners looks like a
+     mistake, and the radius has to be the smaller of the two anyway once the
+     control is taller than it is round. */
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: var(--card-shadow);
+  flex: 0 0 auto;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--line-bright);
+}
+
+.fmt-btn {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fmt-btn { border-radius: 999px; }
+.fmt-btn:hover { background: var(--surface-2); color: var(--fg); }
+
+/* The pressed state has to be unmistakable: it is the only signal that the
+   caret is inside formatted text, and it doubles as the readout for what a
+   concurrent peer just did to the range you are standing in. */
+.fmt-btn-on {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+}
+
+.fmt-btn-wide { font-size: 12px; letter-spacing: 0.02em; }
+
+/* ---- inline marks ---- */
+.cm-fmt-bold { font-weight: 700; }
+.cm-fmt-italic { font-style: italic; }
+.cm-fmt-underline { text-decoration: underline; }
+.cm-fmt-strike { text-decoration: line-through; }
+.cm-fmt-underline.cm-fmt-strike { text-decoration: underline line-through; }
+
+.cm-fmt-code {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+/* ---- line decorations ---- */
+.cm-fmt-header-1 { font-size: 1.65em; font-weight: 650; line-height: 1.25; }
+.cm-fmt-header-2 { font-size: 1.3em; font-weight: 600; line-height: 1.3; }
+
+/* Note the .cm-editor prefix on the rules that set padding.
+   Editor.jsx's CodeMirror theme sets `.cm-line { padding: 0 }`, which CM
+   injects into the document head with its own generated class -- it ties on
+   specificity with a bare .cm-fmt-* rule and wins on order. The bullet was
+   silently flat for exactly this reason: the class was applied, the ::before
+   content resolved, and the padding it needed to sit in was zero. */
+.cm-editor .cm-line.cm-fmt-quote {
+  border-left: 3px solid var(--line-bright);
+  padding-left: 12px;
+  color: var(--fg-dim);
+  font-style: italic;
+}
+
+/* A real list would need the marker to participate in layout; this is a
+   rendering of a line attribute, so the marker is drawn rather than inserted.
+   Nothing is added to the document, which keeps the character offsets the two
+   engines transform over identical to what the user typed.
+
+   The rules themselves are the `.cm-fmt-list-*` pair further down, which cover
+   ordered lists too. The boolean `bullet: true` attribute is mapped onto the
+   same class in marks.js rather than getting a rule of its own up here -- two
+   places drawing the same marker is how they end up disagreeing. */
+
+/* ---- accounts, sharing, history -------------------------------------------
+   Same restraint as the rest: surfaces, one accent, no new palette. These are
+   product chrome around the document, so they must not compete with it. */
+
+/* The landing mosaic keeps its own light surface in BOTH themes, so the
+   account bar cannot use the theme tokens -- in dark mode --fg is near-white
+   and the chip vanished into the pastel panels. These are the only colours in
+   the stylesheet deliberately pinned to one palette, for that reason. */
+/* The account bar is a flex child of the landing nav, so it needs no pinning
+   of its own and no palette of its own -- the app and the mosaic are both
+   light, and the tokens carry the colours. Weight is the whole override. */
+.mosaic-nav .account-chip { font-weight: 500; }
+
+/* The form is anchored to the control rather than sitting in the flow.
+   In the flow it worked on the landing page, where the whole bar is absolutely
+   positioned with room around it, and broke on the documents page: inside a
+   56px sticky header the panel grew upward and was clipped by the viewport,
+   so the email field was cut in half. */
+.account { position: relative; display: flex; align-items: center; gap: 8px; z-index: 30; }
+
+.account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--fg);
+}
+
+.account-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.account-btn, .header-btn {
+  height: 28px;
+  padding: 0 12px;
+  border: var(--card-border);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--card-shadow);
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.account-btn:hover, .header-btn:hover { color: var(--fg); border-color: var(--fg-faint); }
+
+.header-btn.on {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.link-btn {
+  border: 0;
+  background: none;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.link-btn:hover { color: var(--accent); text-decoration: underline; }
+
+.primary-btn {
+  height: 32px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(13, 148, 136, 0.28);
+}
+.primary-btn:hover { background: #0b7f75; }
+.primary-btn:disabled { opacity: 0.55; cursor: default; }
+/* The one place a primary button is destructive. Same shape, different
+   promise -- a red "Delete" reads as the consequence, not the default. */
+.primary-btn.danger-btn { background: var(--bad); }
+.primary-btn.danger-btn:hover { background: #8c2724; }
+.primary-btn.small { height: 24px; padding: 0 10px; font-size: 12px; }
+
+.account-form {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 276px;
+  padding: 16px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: #fff;
+  box-shadow: var(--card-shadow-lift);
+}
+
+.account-tabs { display: flex; gap: 4px; margin-bottom: 2px; }
+.account-tabs button {
+  flex: 1;
+  height: 26px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--fg-faint);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.account-tabs button.on { color: var(--fg); border-bottom-color: var(--accent); }
+
+.account-form input, .share-add input, .share-add select {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+}
+.account-form input:focus, .share-add input:focus { outline: 1px solid var(--accent); }
+
+.account-error { margin: 0; color: var(--bad); font-size: 12px; }
+.account-actions { display: flex; align-items: center; gap: 8px; }
+
+/* A rule with the word sitting in a gap in it, rather than a bordered box with
+   a background patch behind the text -- the panel is white in one theme and
+   washed in the other, and a patch has to know which. Two flex-grown lines do
+   not. */
+.account-or {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+  color: var(--fg-faint);
+  font-size: 11px;
+}
+.account-or::before, .account-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* Google renders its own button in here and sizes it itself. The min-height
+   reserves the row while the script is still in flight, so the panel does not
+   jump under the pointer the moment it arrives. */
+.account-google { display: flex; justify-content: center; min-height: 40px; }
+.account-google[hidden] { display: none; }
+
+/* ---- title in the header ---- */
+.doc-title-input {
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 2px 6px;
+  min-width: 120px;
+  max-width: 320px;
+}
+.doc-title-input:hover { border-color: var(--line-bright); }
+.doc-title-input:focus { outline: none; border-color: var(--accent); background: var(--bg); }
+
+.badge-role {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: var(--warn);
+}
+
+.readonly-bar {
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  margin: 12px auto 0;
+  padding: 8px 16px;
+  border: var(--card-border);
+  border-radius: 999px;
+  background: var(--wash-cream);
+  box-shadow: var(--card-shadow);
+  color: #6b5a2e;
+  font-size: 12px;
+}
+
+/* ---- modal ---- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  /* Lighter than a dark scrim: the page underneath is pale, and a heavy
+     overlay on a light app reads as an error state. */
+  background: rgba(28, 32, 40, 0.28);
+  backdrop-filter: blur(3px);
+}
+
+.modal {
+  width: min(520px, calc(100vw - 32px));
+  max-height: 80vh;
+  overflow: auto;
+  padding: 20px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: #fff;
+  box-shadow: var(--card-shadow-lift);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--fg);
+}
+
+.modal-actions {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 12px; margin-top: 16px;
+}
+
+/* ---- import (ADR-021) ---------------------------------------------------- */
+
+.import-lede { margin: 0 0 14px; color: var(--fg-faint); font-size: 12.5px; }
+.import-lede strong { color: var(--fg); font-weight: 600; }
+
+/*
+   A focusable box whose whole job is to receive a paste. `tabIndex` rather
+   than a real input because the content is never edited or displayed here --
+   it is read off the clipboard event and converted -- and a textarea would
+   both invite typing and strip the text/html flavour that carries all the
+   formatting.
+*/
+.import-drive-btn { width: 100%; margin-top: 10px; }
+
+/* Shown instead of the button when the deployment has no Google project. With
+   the paste and file paths gone there is no fallback left, so this is the only
+   thing the dialog can offer -- see ImportDialog.jsx. */
+.import-unavailable { color: var(--fg-faint); }
+.import-unavailable code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--fg);
+}
+
+/* Pushed left so the stage sits away from Cancel and does not shuffle it. */
+.import-status { margin-right: auto; color: var(--fg-faint); font-size: 12px; }
+
+/* The list's two questions: which documents, and in what order. */
+.docs-scope { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+/*
+   The scope select IS the section heading, so it is set at heading size.
+
+   Styled as a visible control rather than as bare text: a native <select>
+   sizes itself to its WIDEST option, so against "Open documents (50+)" the
+   short labels left the arrow stranded an inch from the word and read as a
+   layout bug. A border makes that width deliberate. Native, not a custom
+   menu -- this stays a real select so it keeps the platform's keyboard
+   handling and its phone picker.
+*/
+.docs-scope-select {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  border: var(--card-border);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--card-shadow);
+  padding: 5px 10px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.docs-scope-select:hover { color: var(--accent); }
+.docs-scope-searching { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.docs-count { font-size: 12px; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+.docs-sort-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--fg-faint);
+}
+
+.share-add { display: flex; gap: 8px; margin-bottom: 12px; }
+.share-add input { flex: 1; }
+
+.share-list { list-style: none; margin: 0; padding: 0; }
+.share-list li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.share-name { color: var(--fg); }
+.share-email { color: var(--fg-faint); font-size: 12px; flex: 1; }
+.share-role { color: var(--fg-dim); font-size: 12px; font-family: var(--mono); }
+
+/* ---- history ---- */
+.history-pane {
+  width: 308px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--line);
+  background: var(--wash-blush);
+  overflow: auto;
+}
+.history-pane .history-list,
+.history-pane .history-preview {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.history-head-actions { display: flex; align-items: center; gap: 4px; }
+.history-title { font-size: 13px; color: var(--fg); }
+
+.history-empty, .history-note {
+  margin: 0;
+  padding: 12px;
+  color: var(--fg-faint);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.history-error { margin: 0; padding: 10px 12px; color: var(--bad); font-size: 12px; }
+
+.history-list { list-style: none; margin: 0; padding: 0; }
+.history-item { border-bottom: 1px solid var(--line); }
+.history-item.on { background: var(--surface-2); }
+
+.history-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.history-item-main:hover { background: var(--surface-2); }
+
+.history-label { font-size: 13px; color: var(--fg); display: flex; align-items: center; gap: 6px; }
+.history-auto {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-faint);
+  border: 1px solid var(--line-bright);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.history-meta { font-size: 11px; color: var(--fg-faint); font-family: var(--mono); }
+
+.history-preview { border-top: 1px solid var(--line-bright); }
+.history-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.history-preview-body {
+  margin: 0;
+  padding: 0 12px 12px;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fg-dim);
+}
+
+/* ---- the documents page ---------------------------------------------------
+   The list sits in a card carrying the landing page's washes. The rows inside
+   stay dense and plain: the colour is there to make the page feel like the
+   rest of the product, not to decorate every line of it. */
+
+.docs-page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+}
+
+.docs-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 60px;
+  padding: 0 22px;
+  background: rgba(240, 240, 240, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.docs-brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--fg);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.docs-search { flex: 1; min-width: 0; }
+
+.docs-search input {
+  width: 100%;
+  max-width: 520px;
+  height: 36px;
+  padding: 0 14px;
+  border: var(--card-border);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--card-shadow);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+}
+.docs-search input:focus { outline: none; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.16); }
+
+.docs-main {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 24px 22px 90px;
+}
+
+.docs-hero {
+  padding: 24px 26px;
+  margin-bottom: 22px;
+}
+.docs-hero h1 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #1f2a17;
+}
+.docs-hero p {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #4a5540;
+}
+.docs-hero a { color: #2f6b34; font-weight: 600; }
+
+.docs-error {
+  max-width: 940px;
+  margin: 12px auto 0;
+  padding: 9px 14px;
+  border-radius: var(--card-radius-sm);
+  background: #fdecea;
+  border: 1px solid rgba(194, 65, 60, 0.28);
+  color: var(--bad);
+  font-size: 13px;
+}
+
+.docs-section {
+  margin-bottom: 18px;
+  padding: 18px 18px 14px;
+}
+
+.docs-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+.docs-section-head h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4d535d;
+}
+.docs-subtitle { margin: 5px 0 0; font-size: 12px; color: #767c86; max-width: 60ch; }
+
+.docs-empty { margin: 0; padding: 10px 4px; color: #767c86; font-size: 13px; }
+
+/* The list is white-on-wash: the card carries the colour, the rows stay
+   legible. A translucent white reads correctly on all five washes. */
+/*
+   Cards, not rows.
+
+   A list of names is only useful if you named things well and remember doing
+   it. The card carries the opening of the document, which is what people
+   actually recognise one by -- and it costs nothing to send, because that
+   text is already projected out for search (ADR-017).
+
+   The class names stay `docs-list` / `docs-row`: this is still a list of
+   document entries, and every harness that drives this page addresses it
+   through those two.
+*/
+.docs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.docs-row {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 0 9px;
+  border-radius: var(--card-radius-sm);
+  /* Deliberately NOT `overflow: hidden`. The rounded top belongs to the
+     thumbnail, which does its own clipping; clipping at the card would take
+     the row's action menu with it. */
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(20, 24, 35, 0.07);
+  transition: box-shadow .12s;
+}
+.docs-row:hover { box-shadow: var(--card-shadow-lift), inset 0 0 0 1px rgba(20, 24, 35, 0.10); }
+
+/*
+   The page, at thumbnail size, with the document's own opening set on it.
+
+   Not a screenshot: there is no headless browser here, and a render job for a
+   listing would be a lot of machinery for a small picture. It is the real
+   text, scaled down on a page-shaped tile and clipped at the fold -- which is
+   what makes a document recognisable across a grid. You are reading the shape
+   of the first paragraph, not the words.
+*/
+.docs-thumb-link { display: block; text-decoration: none; }
+.docs-thumb {
+  display: block;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+  border-radius: var(--card-radius-sm) var(--card-radius-sm) 0 0;
+  background: var(--surface-2);
+  border-bottom: 1px solid rgba(20, 24, 35, 0.08);
+}
+/* Inset on three sides so the sheet reads as a page sitting on a surface,
+   and runs off the bottom edge the way a real page continues past the fold. */
+.docs-page {
+  display: block;
+  height: 100%;
+  margin: 9px 10px 0;
+  padding: 8px 9px 0;
+  background: #fff;
+  border-radius: 3px 3px 0 0;
+  box-shadow: 0 1px 4px rgba(24, 30, 45, 0.10);
+  overflow: hidden;
+}
+.docs-page-text {
+  display: block;
+  color: #3d434d;
+  font-size: 5.5px;
+  line-height: 1.85;
+  letter-spacing: 0.01em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.docs-page-blank {
+  display: block;
+  color: var(--fg-faint);
+  font-size: 9px;
+  font-style: italic;
+}
+
+.docs-row .docs-name,
+.docs-row .docs-rename { margin: 9px 12px 0; }
+.docs-row .docs-foot { margin: 6px 12px 0; }
+
+.docs-name {
+  min-width: 0;
+  position: relative;
+  /* Two lines, then ellipsis. A card is wide enough for a real title and a
+     one-line clamp truncated most of them mid-word. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+}
+.docs-name:hover { color: var(--accent); }
+
+/* Everything that is about the document rather than in it. */
+.docs-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-right: 22px;
+  font-size: 11px;
+}
+
+/* Deleted rows.
+   Struck through and dimmed rather than merely greyed: "greyed out" in a list
+   of links reads as "not available yet", and this is the opposite -- it was
+   available, and it is being shown precisely so it can be brought back. The
+   title is a span here, not an anchor, so it takes no link colour and no
+   hover of its own. */
+/* A content hit shows its excerpt in full rather than clamped: the snippet is
+   the evidence for why this card is in the list at all, and cutting it short
+   would hide the matched word about half the time. */
+.docs-snippet {
+  margin: 0;
+  color: var(--fg-faint);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.docs-snippet mark {
+  background: rgba(250, 204, 21, 0.38);
+  color: var(--fg);
+  border-radius: 3px;
+  padding: 0 2px;
+  /* The excerpt is the only place on this page where a match is pointed at
+     rather than described, so it carries weight as well as colour -- colour
+     alone would say nothing to anyone who cannot distinguish it. */
+  font-weight: 600;
+}
+
+.docs-row-deleted { opacity: 0.72; }
+.docs-row-deleted:hover { opacity: 1; }
+.docs-name-deleted {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg-faint);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: line-through;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docs-rename {
+  flex: 1;
+  height: 28px;
+  padding: 0 9px;
+  border: 1.5px solid var(--accent);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--fg);
+  font: inherit;
+  font-size: 14px;
+}
+.docs-rename:focus { outline: none; }
+
+.docs-owner { font-size: 12px; color: #767c86; white-space: nowrap; }
+
+.docs-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--ok);
+  font-family: var(--mono);
+}
+.docs-online .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+
+.docs-tabs { font-size: 11.5px; color: var(--fg-faint); font-family: var(--mono); }
+
+.docs-when {
+  width: 84px;
+  text-align: right;
+  font-size: 12px;
+  color: #767c86;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+/* Pinned to the card's corner rather than sitting in the flow: the footer
+   wraps on a narrow card, and an action button that moves around with the
+   metadata is a button you have to look for. */
+/* Pinned to the card's bottom corner: the footer wraps on a narrow card, and
+   an action button that moves around with the metadata is one you have to go
+   looking for. */
+.docs-menu-wrap { position: absolute; right: 6px; bottom: 5px; }
+.docs-menu-btn { font-size: 15px; line-height: 1; }
+
+.docs-menu {
+  position: absolute;
+  right: 0;
+  /* Upward: the button is pinned to the bottom of the card, so opening
+     downward put the menu off the end of it. */
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  min-width: 138px;
+  padding: 5px;
+  border: var(--card-border);
+  border-radius: var(--card-radius-sm);
+  background: #fff;
+  box-shadow: var(--card-shadow-lift);
+  display: flex;
+  flex-direction: column;
+}
+
+.docs-menu a, .docs-menu button {
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.docs-menu a:hover, .docs-menu button:hover { background: var(--surface-2); color: var(--fg); }
+.docs-menu .danger { color: var(--bad); }
+.docs-menu .danger:hover { background: #fdecea; }
+
+.docs-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: #0d9488;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.docs-link:hover { text-decoration: underline; }
+
+@media (max-width: 620px) {
+  .docs-header { gap: 10px; padding: 0 12px; }
+  .docs-brand { display: none; }
+  .docs-when { display: none; }
+  .docs-main { padding: 16px 12px 60px; }
+  .docs-hero { padding: 18px; }
+  .docs-hero h1 { font-size: 21px; }
+}
+
+/* ---- the lab's engine switch ----------------------------------------------
+   A segmented control, not a badge. The engine is the one thing in the lab you
+   are meant to change, and the previous UI only showed which one was active --
+   you had to know to edit the query string. */
+
+.engine-toggle {
+  display: inline-flex;
+  padding: 2px;
+  border: var(--card-border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: var(--card-shadow);
+}
+
+.engine-opt {
+  padding: 3px 12px;
+  border-radius: 999px;
+  color: var(--fg-faint);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  line-height: 18px;
+}
+.engine-opt:hover { color: var(--fg-dim); }
+.engine-opt.on {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(24, 30, 45, 0.12);
+}
+
+/* ---- lab: pointing the page at a document ---------------------------------
+   `.lab-subject` and `.pane-kind` belong to the lab's own block further up; a
+   copy here would silently override it. */
+
+.lab-select,
+.docs-sort {
+  height: 26px;
+  max-width: 210px;
+  padding: 0 8px;
+  border: var(--card-border);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--card-shadow);
+  color: var(--fg-dim);
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.lab-select:hover, .docs-sort:hover { color: var(--fg); }
+
+
+/* ---- paragraph-style dropdown in the toolbar ------------------------------
+   A select rather than a run of toggles, because headings are mutually
+   exclusive -- see the note in Toolbar.jsx. Styled to sit inside the pill
+   without looking like a form control dropped into a toolbar. */
+.fmt-select {
+  height: 26px;
+  max-width: 132px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.fmt-select:hover { background: var(--surface-2); color: var(--fg); }
+.fmt-select:focus { outline: 1px solid var(--accent); }
+
+/* Heading 3. The other two live with the line decorations above; this one is
+   here because it arrived with the style dropdown, and `header` already
+   carried an arbitrary number -- marks.js emits cm-fmt-header-<n> for whatever
+   value the attribute holds, so this rule is the entire cost of adding it. */
+.cm-editor .cm-line.cm-fmt-header-3 { font-size: 1.12em; font-weight: 600; line-height: 1.35; }
+
+/* ---- account control inside the document header ---------------------------
+   The editor was the one surface with no way to sign in, which made "sign in
+   to share" an instruction with nowhere to carry it out. `.account` is already
+   position:relative, so the sign-in form drops out of it as a popover exactly
+   as it does on the landing page -- no second layout needed. */
+.header-account { display: flex; align-items: center; margin-left: 4px; }
+
+/* ---- the sign-in / claim ramp in the share dialog -------------------------
+   Here the sign-in form IS the content of the panel, so it must sit in the
+   flow. Left absolute it would hang off the modal's top-right corner, which
+   is where the landing page wants it and nowhere near where this does. */
+.share-gate { display: flex; flex-direction: column; gap: 12px; }
+.share-gate .account { display: block; }
+.share-gate .account-form {
+  position: static;
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.share-gate .primary-btn { align-self: flex-start; }
+
+/* ---- the full toolbar: popovers, swatches, colour buttons -----------------
+   Everything below belongs to the controls that carry a VALUE rather than a
+   flag -- colour, highlight, link. They need somewhere to choose from, which a
+   toggle button does not. */
+
+.fmt-btn:disabled { opacity: 0.35; cursor: default; }
+.fmt-btn:disabled:hover { background: transparent; color: var(--fg-dim); }
+
+.fmt-select-narrow { max-width: 76px; }
+
+/* The anchor is what the popover is positioned against. It has to be its own
+   element: the toolbar is a flex row, and a `position: relative` button would
+   still work, but the panel would then be clipped by the button's own
+   overflow once the toolbar wraps. */
+.fmt-anchor { position: relative; display: inline-flex; }
+
+.fmt-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: var(--card-border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--card-shadow-lift);
+}
+
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 20px);
+  gap: 6px;
+}
+
+.swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.swatch:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* The letter sits above a bar showing the colour it will apply -- the same
+   affordance every word processor uses, and the only way a single button can
+   report a value without spelling out a hex code. */
+.fmt-btn-color {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1;
+}
+.fmt-color-bar {
+  display: block;
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.link-form { display: flex; flex-direction: column; gap: 8px; width: 236px; }
+.link-form input {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+}
+.link-form input:focus { outline: 1px solid var(--accent); }
+.link-form-actions { display: flex; align-items: center; gap: 8px; }
+.fmt-hint { margin: 0; color: var(--fg-faint); font-size: 11px; }
+
+/* ---- rendering the new attributes ----------------------------------------
+   Inline VALUES (font, size, colour, highlight) are emitted as inline styles
+   by marks.js, because their value comes from the document -- there is no
+   class to write for "14pt". Only the flags and the line attributes are
+   classes, and they live here. */
+
+.cm-fmt-sup, .cm-fmt-sub { font-size: 0.72em; line-height: 0; }
+.cm-fmt-sup { vertical-align: super; }
+.cm-fmt-sub { vertical-align: sub; }
+
+.cm-fmt-link {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* ---- line attributes ---- */
+/* Note the .cm-editor prefix, for the reason spelled out above the quote rule:
+   CodeMirror's own theme sets `.cm-line { padding: 0 }` from the document head
+   and ties with a bare .cm-fmt-* rule on specificity, winning on order. */
+.cm-editor .cm-line.cm-fmt-align-center { text-align: center; }
+.cm-editor .cm-line.cm-fmt-align-right { text-align: right; }
+.cm-editor .cm-line.cm-fmt-align-justify { text-align: justify; }
+
+.cm-editor .cm-line.cm-fmt-spacing-115 { line-height: 1.15; }
+.cm-editor .cm-line.cm-fmt-spacing-150 { line-height: 1.5; }
+.cm-editor .cm-line.cm-fmt-spacing-200 { line-height: 2; }
+
+/* Indent uses MARGIN, not padding, so it composes with the list and quote
+   rules -- those already spend padding-left on their markers, and two rules
+   setting the same property means the marker moves or the indent vanishes
+   depending on which one loaded last. */
+.cm-editor .cm-line.cm-fmt-indent-1 { margin-left: 32px; }
+.cm-editor .cm-line.cm-fmt-indent-2 { margin-left: 64px; }
+.cm-editor .cm-line.cm-fmt-indent-3 { margin-left: 96px; }
+.cm-editor .cm-line.cm-fmt-indent-4 { margin-left: 128px; }
+.cm-editor .cm-line.cm-fmt-indent-5 { margin-left: 160px; }
+.cm-editor .cm-line.cm-fmt-indent-6 { margin-left: 192px; }
+.cm-editor .cm-line.cm-fmt-indent-7 { margin-left: 224px; }
+.cm-editor .cm-line.cm-fmt-indent-8 { margin-left: 256px; }
+
+/* Lists. The marker is DRAWN, not inserted: it is a rendering of a line
+   attribute, and a real character would be text every replica had to agree on
+   and every caret had to step over. */
+.cm-editor .cm-line.cm-fmt-list-bullet,
+.cm-editor .cm-line.cm-fmt-list-number {
+  padding-left: 26px;
+  position: relative;
+}
+.cm-editor .cm-line.cm-fmt-list-bullet::before {
+  content: "•";
+  position: absolute;
+  left: 9px;
+  color: var(--fg-dim);
+}
+/* The number is computed in marks.js and handed over as a custom property.
+   A CSS counter cannot be used: counters cannot be reset from a decoration,
+   and restarting at 1 for each separate list is the entire requirement. */
+.cm-editor .cm-line.cm-fmt-list-number::before {
+  content: var(--list-n, "1") ".";
+  position: absolute;
+  left: 2px;
+  width: 18px;
+  text-align: right;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Symbol buttons -- bullet, number, quote, the indent arrows.
+   The toolbar's 13px body size is right for "B" and "H1" and far too small
+   for a punctuation glyph standing in for an icon: at 13px the blockquote
+   mark was a speck, and the indent arrows were unreadable. Sized up here
+   rather than in each button's inline style, so they stay consistent. */
+.fmt-btn-glyph {
+  font-size: 16px;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+
+/* ---- comments ------------------------------------------------------------
+   The highlight is a wash rather than an underline: a comment can cover a
+   whole sentence, and an underline that long reads as a spelling error. */
+
+.cm-comment-range {
+  background: rgba(251, 191, 36, 0.28);
+  border-bottom: 2px solid rgba(217, 119, 6, 0.45);
+  cursor: pointer;
+}
+.cm-comment-range.cm-comment-resolved {
+  /* Still visible, but no longer competing with the open ones. */
+  background: rgba(148, 163, 184, 0.16);
+  border-bottom-color: rgba(100, 116, 139, 0.3);
+}
+.cm-comment-range.cm-comment-active {
+  background: rgba(251, 191, 36, 0.5);
+  border-bottom-color: rgba(180, 83, 9, 0.75);
+}
+
+.comments-pane {
+  width: 320px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px 40px;
+  border-left: 1px solid var(--line);
+  background: var(--wash-cream);
+  overflow-y: auto;
+}
+
+.comments-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  /* The close button takes the free space with `margin-left: auto`, which
+     leaves the title and the count with nothing between them. */
+  gap: 8px;
+}
+.comments-title { font-weight: 600; font-size: 14px; }
+.comments-count { font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
+
+.comments-empty { font-size: 12.5px; color: var(--fg-dim); line-height: 1.6; margin: 4px 2px; }
+.comments-error {
+  font-size: 12px;
+  color: #9f1239;
+  background: rgba(244, 63, 94, 0.09);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: 8px;
+  padding: 7px 9px;
+}
+
+.comment-thread {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  cursor: pointer;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.comment-thread.is-active {
+  border-color: rgba(217, 119, 6, 0.6);
+  box-shadow: 0 1px 10px rgba(217, 119, 6, 0.14);
+}
+.comment-thread.is-resolved { opacity: 0.72; }
+.comment-thread.is-orphaned { border-style: dashed; }
+.comment-thread.comment-new { cursor: default; border-color: rgba(217, 119, 6, 0.5); }
+
+.comment-quote {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 3px solid rgba(217, 119, 6, 0.5);
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  line-height: 1.5;
+  /* A comment can be made on a whole paragraph; the sidebar cannot show it. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.comment-thread.is-orphaned .comment-quote {
+  border-left-color: var(--line-bright);
+  text-decoration: line-through;
+  color: var(--fg-faint);
+}
+
+.comment-orphaned {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--fg-faint);
+  font-style: italic;
+}
+
+.comment { display: flex; flex-direction: column; gap: 3px; }
+.comment-meta { display: flex; align-items: center; gap: 6px; }
+.comment-avatar {
+  width: 19px; height: 19px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  flex: 0 0 auto;
+}
+.comment-author { font-size: 12px; font-weight: 600; }
+.comment-time { font-size: 10.5px; color: var(--fg-faint); font-family: var(--mono); }
+.comment-x {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--fg-faint);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.comment-x:hover { color: #9f1239; }
+.comment-body { margin: 0; font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+
+.comment-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.comment-thread textarea,
+.comment-reply textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-bright);
+  border-radius: 7px;
+  resize: vertical;
+  background: #fff;
+  color: var(--fg);
+}
+.comment-reply { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+
+.comment-actions .btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.comment-actions .btn-primary:disabled { opacity: 0.45; cursor: default; }
+.comment-actions .btn-quiet {
+  background: none;
+  border: 0;
+  color: var(--fg-dim);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 5px 6px;
+  border-radius: 6px;
+}
+.comment-actions .btn-quiet:hover { background: rgba(20, 24, 35, 0.06); color: var(--fg); }
+
+.comments-resolved summary {
+  font-size: 12px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.comments-resolved[open] { display: flex; flex-direction: column; gap: 8px; }
+
+.header-badge {
+  display: inline-block;
+  margin-left: 5px;
+  min-width: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-family: var(--mono);
+  line-height: 15px;
+  text-align: center;
+}
+
+/* ---- status bar ----------------------------------------------------------- */
+
+.statusbar {
+  flex: 0 0 auto;
+  /* A grid item, and grid items floor at their content width. The hint on the
+     right is a fixed string, so without this the status bar could set the
+     width of the whole app on a narrow screen -- the same trap the header and
+     the body rows each have their own note about. */
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 16px;
+  border-top: 1px solid var(--line);
+  /* Chrome, like the header: the page tint rather than a white slab, so the
+     window is framed top and bottom in the same material. */
+  background: rgba(240, 240, 240, 0.86);
+  backdrop-filter: blur(10px);
+  font-size: 11.5px;
+  color: var(--fg-dim);
+}
+.statusbar-main strong { font-weight: 650; color: var(--fg); }
+.statusbar-sep { margin: 0 6px; color: var(--fg-faint); }
+.statusbar-hint { font-family: var(--mono); font-size: 10.5px; color: var(--fg-faint); }
+
+/* A note that says what an export could not carry. Bottom-centre so it does
+   not sit under the header buttons that produced it. */
+.toast-note {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: 560px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: rgba(20, 24, 35, 0.92);
+  color: #fff;
+  font-size: 12.5px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* The search panel is CodeMirror's own; only its skin is ours. */
+.editor .cm-panels { border: 0; background: transparent; }
+.editor .cm-panels.cm-panels-top { border-bottom: 1px solid var(--line); }
+.editor .cm-search {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 7px 12px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.editor .cm-search input[type="text"] {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--line-bright);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--fg);
+}
+.editor .cm-search button {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 9px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.editor .cm-search button:hover { color: var(--fg); border-color: var(--fg-faint); }
+.editor .cm-search label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.editor .cm-searchMatch { background: rgba(251, 191, 36, 0.34); }
+.editor .cm-searchMatch-selected { background: rgba(217, 119, 6, 0.5); }
+.editor .cm-selectionMatch { background: rgba(13, 148, 136, 0.14); }
+
+/* ---- images and tables (ADR-013) ------------------------------------------
+   Both are drawn from ordinary characters: an image is one U+FFFC, a table is
+   a run of lines whose cells are separated by U+001F. Nothing below knows
+   about a document tree, because there isn't one. */
+
+.cm-embed-image {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: baseline;
+  line-height: 0;
+}
+.cm-embed-image img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  /* A selected image should look selected. The character underneath it is part
+     of the selection like any other, and CodeMirror paints that behind us. */
+  box-shadow: 0 1px 6px rgba(20, 24, 35, 0.14);
+}
+/* A URL that will not load still occupies a character, and that character has
+   to be clickable so it can be deleted. */
+.cm-embed-image.is-broken::after {
+  content: 'image unavailable';
+  display: inline-block;
+  padding: 10px 14px;
+  border: 1px dashed var(--line-bright);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--fg-faint);
+}
+.cm-embed-image.is-broken img { display: none; }
+
+/* A table row is a flex line; its cells are the flex items. Widths come from
+   --cols, set per line from the widest row in that table, so a short row
+   leaves trailing space instead of stretching. */
+.cm-line.cm-fmt-table-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  align-items: stretch;
+  padding: 0 !important;
+  border-left: 1px solid var(--line-bright);
+  border-right: 1px solid var(--line-bright);
+  border-bottom: 1px solid var(--line-bright);
+  background: rgba(255, 255, 255, 0.5);
+  /* A row whose cells are ALL empty contains no elements at all, so without a
+     floor it collapses to a hairline and cannot be clicked into. */
+  min-height: 1.95em;
+}
+.cm-line.cm-fmt-table-first { border-top: 1px solid var(--line-bright); border-radius: 6px 6px 0 0; }
+.cm-line.cm-fmt-table-last { border-radius: 0 0 6px 6px; }
+
+.cm-cell {
+  /* Everything in a row is on grid row 1, explicitly. The separator shares its
+     cell's COLUMN, and grid's sparse auto-placement refuses to overlap two
+     items -- so without this it pushes the separator onto a new row and the
+     cells stack vertically instead of sitting side by side. */
+  grid-row: 1;
+  min-width: 0;
+  padding: 5px 9px;
+  /* Long words must wrap inside their cell rather than widening the row. */
+  overflow-wrap: anywhere;
+}
+/* The separator character IS the divider: one real caret position, one pixel
+   wide, so walking a row with the arrow keys still moves one character at a
+   time and Home/End still mean what they always meant. */
+.cm-cell-sep {
+  /* Shares its cell's grid track, pinned to the right edge, so it draws the
+     divider without consuming a column of its own. */
+  grid-row: 1;
+  justify-self: end;
+  width: 1px;
+  background: var(--line-bright);
+  color: transparent;
+  overflow: hidden;
+  /* Without this the character claims text width and the divider becomes a
+     visible gap that grows with the font size. */
+  font-size: 0;
+}
+
+/* The table size form in the toolbar popover. */
+.table-form .table-size { display: flex; gap: 10px; }
+.table-form .table-size label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.table-form .table-size input {
+  width: 68px;
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 7px;
+  border: 1px solid var(--line-bright);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--fg);
+}
+
+/* =============================================================== mobile ==
+   The app was built for a desktop editor and its layout says so: three
+   columns, a toolbar that assumes horizontal room, and side panes that take
+   space from the document rather than covering it.
+
+   The rule below is the whole strategy: ON A NARROW SCREEN THE DOCUMENT IS
+   THE PAGE. Everything that is not the document -- inspector, comments,
+   history -- stops being a column and becomes an overlay you open and close.
+   Splitting a phone screen between a document and a sidebar gives you two
+   things too narrow to use. */
+
+.pane-close {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 2px;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.pane-close:hover { color: var(--fg); }
+
+@media (max-width: 900px) {
+  .body { position: relative; }
+
+  /* One rule for all four panes. They differ in content and in nothing that
+     matters to this layout. */
+  .comments-pane,
+  .tasks-pane,
+  .history-pane,
+  .inspector {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(90vw, 360px);
+    z-index: 40;
+    box-shadow: -10px 0 34px rgba(20, 24, 35, 0.16);
+  }
+  /* The inspector's desktop rule positions it from the header down; as an
+     overlay inside .body it is already below the header. */
+  .inspector { top: 0; }
+  .inspector-collapsed { display: none; }
+
+  /* The index is the same kind of thing and was left out of the rule above.
+     It stayed a 216px column on a phone, so the document got what was left --
+     under 200px, which is narrower than the sheet it is trying to draw, and
+     the page was clipped rather than shown.
+
+     Expanded, it overlays from the left exactly as the others overlay from
+     the right. Collapsed it is a 34px rail and stays in the flow, because at
+     that width it costs nothing and is the only way back to the tab list. */
+  .tab-index:not(.is-collapsed) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 40;
+    box-shadow: 10px 0 34px rgba(20, 24, 35, 0.16);
+  }
+
+  /* The editor keeps the full width underneath. */
+  .editor-paged { margin-top: 8px; }
+}
+
+@media (max-width: 900px) {
+  /* The header scrolls. Its buttons are the way into every pane, so they
+     cannot be dropped -- but they also must not set the width of the app.
+     900 rather than 720: a 744px tablet has the same problem and had been
+     overflowing sideways by about forty pixels, which is exactly the amount
+     that looks like a rendering glitch rather than a layout bug. */
+  .header {
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 6px;
+    padding: 0 10px;
+  }
+  .header::-webkit-scrollbar { display: none; }
+  .header > * { flex: 0 0 auto; }
+  .header-spacer { flex: 1 1 auto; min-width: 4px; }
+
+  .statusbar { min-width: 0; }
+  .statusbar-main { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Peer avatars go. Presence is already visible where it matters -- as
+     coloured carets in the text -- and on a narrow header these push the
+     buttons that open the panes off the right-hand edge. */
+  .header .avatars { display: none; }
+}
+
+@media (max-width: 720px) {
+  /* The toolbar scrolls sideways rather than wrapping onto three rows. On a
+     phone, wrapping costs a third of the visible document to show formatting
+     controls that are not being used. */
+  .toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    justify-content: flex-start;
+    border-radius: 10px;
+    margin: 8px 8px 0;
+    padding: 5px 8px;
+  }
+  .toolbar::-webkit-scrollbar { display: none; }
+  /* Buttons must not shrink to nothing when the row overflows. */
+  .toolbar > * { flex: 0 0 auto; }
+
+  /* A phone is narrower than a sheet of Letter paper, so the sheet becomes
+     the screen. Only the WIDTH gives way: `--page-h` is untouched, so the
+     document still breaks into pages of the same height, and the sheet edges
+     still read as page boundaries.
+
+     The margins shrink with it. A 96px margin on a 412px screen leaves 220px
+     of text, which is a column too narrow to read -- the page would be mostly
+     margin. */
+  .editor-paged {
+    margin: 8px 0 0;
+    max-width: none;
+    --page-margin: 18px;
+  }
+
+  /* Touch targets. 24px controls are fine with a mouse and not with a thumb. */
+  .fmt-btn { min-width: 34px; min-height: 34px; }
+  .header-btn { min-height: 34px; }
+
+  .statusbar { padding: 5px 12px; }
+  .statusbar-hint { display: none; }
+
+  /* The document title takes what is left after the buttons, rather than
+     pushing them off the edge. */
+  .doc-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+}
+
+@media (max-width: 560px) {
+  /* At this width the header cannot hold five labelled buttons. The ones that
+     open a pane keep their labels because they are how you reach the pane;
+     Export and the engine badge go, because both have another route -- the
+     document still exports from a wider window, and the engine is in the URL. */
+  .header .badge-engine,
+  .header-btn[title="Download as Markdown"] { display: none; }
+
+  /* Full width, expressed against the VIEWPORT rather than the container.
+     `width: 100%` here resolves against `.body`, and an overlay that is as
+     wide as its container cannot be the thing that stops the container being
+     too wide. */
+  .comments-pane,
+  .history-pane,
+  .inspector {
+    width: 100vw;
+    max-width: 100%;
+  }
+
+  /* A table wider than the screen scrolls with the line rather than forcing
+     the whole page sideways. Cells stay in their columns; the row is what
+     moves. */
+  .cm-line.cm-fmt-table-row { font-size: 13px; }
+  .cm-cell { padding: 4px 6px; }
+}
+
+/* ---- the lab ---- */
+
+@media (max-width: 900px) {
+  /* The lab is an instrument, and instruments have a minimum size below which
+     they mislead rather than inform: two replicas side by side become two
+     columns too narrow to show a sentence, and the timeline's columns collide.
+     Stacking is honest; hiding the lab would not be. */
+  .lab-body { grid-template-rows: minmax(0, 1fr) minmax(140px, 40%); }
+}
+
+/* ---- the scale page ---- */
+
+@media (max-width: 640px) {
+  .scale-page { padding: 32px 16px 80px; }
+  .scale-head h1 { font-size: 29px; }
+  .scale-lede { font-size: 15px; }
+  /* Three numeric columns do not fit; the table scrolls inside its own box
+     rather than widening the page. */
+  .scale-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .limit-head { flex-direction: column; gap: 2px; }
+}
+
+/* ---- the index panel (ADR-014) -------------------------------------------
+   Tabs down the left, each opening into its own headings. A column rather
+   than a strip above the document: it is navigated FROM, so it has to stay
+   put while you read, and an outline laid out horizontally is not an outline.
+
+   It collapses to a hairline, and that is not decoration -- the editor already
+   spends its horizontal budget on the inspector and the comments pane, and a
+   third permanent column on a laptop leaves the document competing for what is
+   left. */
+
+.tab-index {
+  flex: 0 0 auto;
+  width: 216px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 6px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Lilac: the landing page washes its chips panel in it, and this is the
+     same job -- a short list of things you pick between. Flat `--surface`
+     white made the one piece of chrome on the left of the document the only
+     panel in the app with no wash at all.
+
+     Scrimmed: see --wash-scrim. Full strength down a full-height column, the
+     violet end of this wash is a block of colour rather than a tint. */
+  background-image: linear-gradient(var(--wash-scrim), var(--wash-scrim)), var(--wash-lilac);
+  border-right: 1px solid var(--line);
+}
+
+.tab-index.is-collapsed {
+  width: 34px;
+  align-items: center;
+  padding: 10px 4px;
+  gap: 6px;
+}
+
+.tab-index-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 6px 8px;
+}
+.tab-index-title {
+  flex: 1 1 auto;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.tab-index-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--fg-faint);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+}
+.tab-index-toggle:hover { background: var(--surface-2); color: var(--fg); }
+/* Pointing right when there is something to open, down when it is open. One
+   glyph, rotated, so the two states cannot drift apart. */
+.tab-index-toggle svg { transition: transform 120ms ease; }
+.tab-index-toggle svg.is-open { transform: rotate(180deg); }
+
+.tab-index-count {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-faint);
+}
+
+.tab-index-list { list-style: none; margin: 0; padding: 0; }
+
+.index-tab { border-radius: 7px; }
+.index-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px 2px 1px 4px;
+  border-radius: 7px;
+}
+.index-tab-row:hover { background: var(--surface-2); }
+.index-tab.is-active > .index-tab-row { background: rgba(13, 148, 136, 0.09); }
+
+.index-tab-chevron {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--fg-faint);
+  cursor: pointer;
+  padding: 4px 3px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+}
+.index-tab-chevron:hover { color: var(--fg); }
+.index-tab-chevron svg { transition: transform 120ms ease; }
+.index-tab-chevron svg.is-open { transform: rotate(90deg); }
+
+.tab-index .doc-tab-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 2px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.index-tab.is-active .doc-tab-btn { color: var(--fg); font-weight: 600; }
+
+.doc-tab-rename {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 6px;
+  margin: 2px 0;
+}
+.doc-tab-rename:focus { outline: none; }
+
+.doc-tab-more {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--fg-faint);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 5px;
+  border-radius: 4px;
+  /* Only on the row you are pointing at or in. A column of dots turns the
+     index into a list of controls with names attached. */
+  opacity: 0;
+}
+.index-tab-row:hover .doc-tab-more,
+.index-tab.is-active .doc-tab-more { opacity: 1; }
+.doc-tab-more:hover { color: var(--fg); background: rgba(20, 24, 35, 0.08); }
+
+.doc-tab-menu-wrap { position: relative; display: inline-flex; }
+.doc-tab-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  min-width: 152px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(20, 24, 35, 0.12);
+}
+.doc-tab-menu button {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.doc-tab-menu button:hover:not(:disabled) { background: var(--surface-2); }
+.doc-tab-menu button:disabled { color: var(--fg-faint); cursor: default; }
+.doc-tab-menu button.danger { color: #9f1239; }
+.doc-tab-menu button.danger:hover { background: rgba(159, 18, 57, 0.08); }
+
+/* The open tab's headings. Indented by level, never nested: the document is
+   not a tree (ADR-013), and a renderer that builds one has to invent an answer
+   for an H4 that arrives before any H1. */
+.tab-outline { list-style: none; margin: 0 0 6px; padding: 0; }
+.outline-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 4px 6px 4px 10px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 0 5px 5px 0;
+}
+.outline-item:hover { background: var(--surface-2); color: var(--fg); }
+/* The section the CARET is in, not the one scrolled into view -- see
+   TabIndex.jsx for why that is the cheaper and truer question. */
+.outline-item.is-here {
+  border-left-color: var(--accent);
+  color: var(--fg);
+  background: rgba(13, 148, 136, 0.07);
+}
+
+.tab-index-empty {
+  margin: 2px 6px 8px 14px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-faint);
+}
+
+.tab-index-add {
+  margin-top: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.tab-index-add:hover { background: var(--surface-2); color: var(--fg); }
+
+.tab-index-error { margin: 6px 8px 0; font-size: 11.5px; color: var(--bad); }
+
+/* ---- tasks (ADR-015) ----------------------------------------------------- */
+
+.tasks-pane {
+  flex: 0 0 288px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  overflow-y: auto;
+  /* The side panes are washed so you can tell which one is open at a glance,
+     with the pane's own hue rather than by reading its heading: comments are
+     cream, history is blush, and the checklist is lime. Tasks was the one
+     still on flat white.
+
+     Scrimmed for the same reason the tab index is: lime is the most saturated
+     of the five, and this pane is the tallest thing it has ever been put on. */
+  background-image: linear-gradient(var(--wash-scrim), var(--wash-scrim)), var(--wash-lime);
+  border-left: 1px solid var(--line);
+}
+
+.tasks-head { display: flex; align-items: center; gap: 8px; }
+.tasks-title { font-weight: 600; font-size: 14px; }
+.tasks-count { font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
+.tasks-empty, .tasks-note {
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  line-height: 1.6;
+  margin: 4px 2px;
+}
+.tasks-error {
+  font-size: 12px;
+  color: var(--bad);
+  background: rgba(194, 65, 60, 0.08);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.task-new { display: flex; gap: 6px; }
+.task-new input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid var(--line-bright);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+}
+.task-new input:focus { outline: 1px solid var(--accent); }
+.task-new .btn-primary {
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 11px;
+  cursor: pointer;
+}
+.task-new .btn-primary:disabled { opacity: 0.45; cursor: default; }
+
+.task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 6px;
+  border-radius: 7px;
+}
+/* Translucent white, not `--surface-2`. That grey was picked against a white
+   pane; over a lime wash it goes muddy, because it is an OPAQUE fill covering
+   the gradient rather than sitting on it. White at low alpha lifts the row
+   the way the same idiom does inside the history pane. */
+.task:hover { background: rgba(255, 255, 255, 0.55); }
+
+/* The native box is kept for keyboard and screen readers and drawn over, so
+   the control stays a checkbox rather than becoming a div that looks like one. */
+.task-check { position: relative; display: inline-flex; padding-top: 1px; }
+.task-check input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.task-check input:disabled { cursor: default; }
+.task-box {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--line-bright);
+  border-radius: 4px;
+  background: var(--surface);
+  display: inline-block;
+}
+.task-check input:checked + .task-box {
+  background: var(--accent);
+  border-color: var(--accent);
+  /* A tick, drawn rather than typed: a text glyph would inherit the row's
+     strike-through the moment the task is done. */
+  background-image: linear-gradient(45deg, transparent 46%, #fff 46%, #fff 60%, transparent 60%),
+                    linear-gradient(-45deg, transparent 60%, #fff 60%, #fff 74%, transparent 74%);
+  background-size: 60% 60%, 100% 100%;
+  background-position: 2px 4px, 0 0;
+  background-repeat: no-repeat;
+}
+.task-check input:focus-visible + .task-box { outline: 2px solid var(--accent); outline-offset: 2px; }
+.task-check input:disabled + .task-box { opacity: 0.5; }
+
+.task-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.task-text { font-size: 13px; line-height: 1.5; word-break: break-word; }
+.task.is-done .task-text { color: var(--fg-faint); text-decoration: line-through; }
+.task-meta { font-size: 10.5px; color: var(--fg-faint); font-family: var(--mono); }
+.task-edit {
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 5px;
+  width: 100%;
+}
+.task-edit:focus { outline: none; }
+
+.task-x {
+  border: 0;
+  background: transparent;
+  color: var(--fg-faint);
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+}
+.task:hover .task-x { opacity: 1; }
+.task-x:hover { color: #9f1239; }
+
+.tasks-done summary {
+  font-size: 12px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.tasks-done[open] { display: flex; flex-direction: column; gap: 4px; }
+
+/* Narrow screens are handled with the other panes, in the shared overlay rule
+   above -- a second set of numbers here is how two panes come to sit at
+   slightly different widths for no reason anybody chose. */
+
+/* Narrow screens: the index becomes an overlay from the left, mirroring what
+   the comments, tasks, history and inspector panes do from the right. It stays
+   collapsed to its hairline until asked for, so a phone opens the document and
+   not a navigation panel. */
+@media (max-width: 900px) {
+  .tab-index:not(.is-collapsed) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(80vw, 260px);
+    z-index: 40;
+    box-shadow: 10px 0 34px rgba(20, 24, 35, 0.16);
+  }
+}
+
+/* Present to assistive technology, absent on screen.
+   Used where a page's subject is already obvious visually but has no element
+   that can carry it as a heading -- the editor's title is an <input>, and an
+   input is not a heading no matter what it contains. The clip-path pair is the
+   modern form; the 1px rect is what keeps it out of the layout without
+   `display: none`, which would remove it from the accessibility tree too and
+   defeat the entire purpose. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- authorship (ADR-018) ------------------------------------------------ */
+
+/* An underline, not a background fill.
+   Filling the line behind the text is the obvious rendering and it fights
+   every other layer in this editor: comment highlights are a background, a
+   text selection is a background, and search matches are a background. Three
+   backgrounds on one character is a colour nobody chose. An underline sits in
+   space none of them use, so authorship composes with all of them instead of
+   competing. */
+.cm-authorship {
+  border-bottom: 2px solid var(--author-color, transparent);
+  /* Keeps the rule clear of descenders, which otherwise collide with it and
+     make two adjacent authors look like one smudged run. */
+  padding-bottom: 1px;
+}
+
+.author-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+  color: var(--fg-faint);
+}
+
+.author-legend-label { font-weight: 600; }
+.author-legend-note { font-style: italic; }
+
+.author-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg);
+}
+
+.author-swatch {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  /* Matches the underline in the text, so the key and the thing it keys look
+     like the same mark rather than two different colour systems. */
+  flex: 0 0 auto;
+}
+
+.author-share {
+  color: var(--fg-faint);
+  font-family: var(--mono);
+  font-size: 11px;
+}

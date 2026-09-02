@@ -1,0 +1,1195 @@
+/**
+ * Landing mosaic.
+ *
+ * Everything here is authored in DESIGN UNITS: the reference stage is
+ * 1374 x 666, and `1rem` is one reference unit. The root font-size knob scales
+ * the whole composition to the viewport, so nothing below is expressed in
+ * device pixels.
+ *
+ * The knob is scoped to `html.mosaic` rather than bare `html`, because the
+ * editor and the lab share this document root on other routes and a 0.5px root
+ * font-size would wreck them.
+ *
+ * Selectors are scoped under `.mosaic-page` for the same reason: class names
+ * like .card, .dot, .badge, .sub and .search already mean something in
+ * styles.css.
+ */
+
+/* 752, not 666: the stage is 666 tall, the nav above it costs 34 plus a 14
+   gap, and the footer below it costs 26 plus a 12 gap. Before the nav existed
+   the knob budgeted for the stage alone, so adding a header in the flow would
+   have pushed the bottom of the search panel under the fold on any short
+   viewport -- and the same is true of anything added underneath.
+
+   Worth knowing before this number is treated as expensive: at 16:10 and
+   wider it is not the binding term at all. 1440x900 resolves the width side
+   to 0.996 and the height side to 1.126, so the composition is sized by
+   `95vw / 1374` and the footer is paid for out of vertical margin that was
+   empty. It only starts to cost anything on genuinely short viewports, which
+   is the case the 94vh term is there to handle. */
+html.mosaic {
+  font-size: min(calc(95vw / 1374), calc(94vh / 752));
+}
+html.mosaic body {
+  background: #f0f0f0;
+  color: #141414;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* A column now. `.mosaic-page` and `#root` are both `display: contents`, so
+     the nav and the stage are the body's own flex children -- in a row they
+     would have sat side by side. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+html.mosaic #root { height: auto; display: contents; }
+
+/* =============================================================== stage == */
+
+.mosaic-page { display: contents; }
+
+.mosaic-page .stage {
+  width: 1374rem;
+  height: 666rem;
+  display: grid;
+  grid-template-columns: 339rem 627rem 388rem;
+  /* 210 / 248 / 190, and the third number is the one that changed: the bottom
+     row was a 156-unit search bar and is now the live demo, which needs room
+     for a replica pane, a verdict line and its control. The 34 units come out
+     of row 2, so the left column's feature list is still 248 + 9 + 190 = 447
+     and the three rows plus their two 9-unit gaps still total 666.
+
+     What row 2 pays for it is the centre and the chart: both span rows 1-2,
+     which went from 501 to 467. The chart is what that costs -- see `.chart`,
+     where the bars were rescaled to fit. */
+  grid-template-rows: 210rem 248rem 190rem;
+  column-gap: 10rem;
+  row-gap: 9rem;
+}
+
+/* ================================================================= nav == */
+
+.mosaic-page .mosaic-nav {
+  width: 1374rem;
+  height: 34rem;
+  margin-bottom: 14rem;
+  display: flex;
+  align-items: center;
+  gap: 22rem;
+}
+
+.mosaic-page .nav-brand {
+  display: inline-flex; align-items: center; gap: 8rem;
+  font-size: 15rem; font-weight: 800; letter-spacing: -.02em;
+  color: #141414; text-decoration: none;
+}
+
+/* The favicon's two carets, redrawn in CSS rather than fetched: the mark is
+   two rules and an <i> apiece, and the page already declines to make requests
+   it does not need. */
+.mosaic-page .nav-mark {
+  display: inline-flex; align-items: flex-end; gap: 3rem;
+  width: 17rem; height: 17rem;
+  padding: 3rem; border-radius: 5rem;
+  background: #0d0f12;
+}
+.mosaic-page .nav-mark i { width: 2.5rem; border-radius: 1.5rem; }
+.mosaic-page .nav-mark i:first-child { height: 11rem; background: #2dd4bf; }
+.mosaic-page .nav-mark i:last-child  { height: 8rem;  background: #f472b6; }
+
+.mosaic-page .nav-links {
+  /* Wraps. There are six routes now, and on a 375-unit phone row they ran
+     25px past the right edge of the page -- a horizontal scrollbar on the
+     landing page, caused by a nav. */
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8rem 18rem;
+  /* Pushes the account bar to the far right and leaves the links beside the
+     wordmark, where a site map reads. */
+  margin-right: auto;
+}
+.mosaic-page .nav-links a {
+  font-size: 13rem; font-weight: 600; letter-spacing: -.01em;
+  color: #55555f; text-decoration: none;
+  padding: 4rem 0;
+  border-bottom: 1.6rem solid transparent;
+}
+.mosaic-page .nav-links a:hover {
+  color: #141414;
+  border-bottom-color: #4a4699;
+}
+
+.mosaic-page .mosaic-foot {
+  width: 1374rem;
+  min-height: 26rem;
+  margin-top: 12rem;
+  display: flex; align-items: center;
+}
+/* Not a `.card`: it is a caption for the composition, not a panel in it, and
+   the mosaic is five cards -- which tools/landing-test.mjs asserts by count. */
+.mosaic-page .mosaic-foot p {
+  margin: 0;
+  max-width: 900rem;
+  font-size: 11rem; font-weight: 400; line-height: 1.45;
+  letter-spacing: -.004em; color: #6a6a74;
+}
+
+.mosaic-page .card {
+  position: relative;
+  border-radius: 22rem;
+  border: 1.6rem solid rgba(255, 255, 255, .92);
+  overflow: hidden;
+  box-shadow: 0 2rem 16rem rgba(24, 30, 45, .045);
+}
+
+/*
+   Reading order, left to right and top to bottom: what it is built on and
+   what that costs down the left, the introduction in the middle where the eye
+   lands first, what it actually looks like beside it, and the demonstration
+   across the foot.
+
+   The biggest panel holds the thing a first-time reader most needs, which is
+   the introduction; the demonstration sits at the foot, because it only means
+   something after the claim it demonstrates.
+
+   The photographs take the larger of the two lower cells and the chart takes
+   the smaller, which is not arbitrary. The right cell is 388x467 and the left
+   is 339x447, and that 31% of width -- 265px to 348px on a 1280 laptop -- is
+   the difference between a toolbar you can read and one you cannot, while the
+   chart's shape survives the narrower column. See DELTA in Landing.jsx.
+
+   It groups the page as well as it sizes it: the left column is the mechanism
+   and its receipts, the right is what you get. */
+.mosaic-page .internals      { grid-column: 1; grid-row: 1; }
+.mosaic-page .insights   { grid-column: 1; grid-row: 2 / span 2; }
+.mosaic-page .intro      { grid-column: 2; grid-row: 1 / span 2; }
+.mosaic-page .features   { grid-column: 3; grid-row: 1 / span 2; }
+.mosaic-page .demo-strip { grid-column: 2 / span 2; grid-row: 3; }
+
+/* ==================================================== 1. under the hood == */
+/*
+   What the thing is built on, and the one measured receipt for it. See
+   Internals.jsx for what each of the four lines is doing.
+*/
+
+.mosaic-page .internals {
+  background:
+    radial-gradient(120% 90% at 85% 8%, #fde3ee 0%, rgba(253, 227, 238, 0) 62%),
+    linear-gradient(160deg, #fce8f1 0%, #fbe4ee 46%, #f9dfe9 100%);
+  padding: 17rem 20rem;
+  display: flex; flex-direction: column; justify-content: center;
+}
+
+.mosaic-page .hood-wrap {
+  display: flex; flex-direction: column;
+  min-width: 0;
+}
+
+/* No category label above the rows -- see Internals.jsx. The 23 units it
+   would cost go to the receipt below, which is a full sentence that glosses
+   its own jargon, and to a looser gap between the rows. */
+
+.mosaic-page .hood-list {
+  margin: 0; padding: 0;
+  list-style: none;
+  display: flex; flex-direction: column; gap: 8.5rem;
+}
+.mosaic-page .hood-list li {
+  font-size: 11.5rem; line-height: 1.28; letter-spacing: -.006em;
+  color: #6d4d5f;
+  /* One line each. Two mechanisms wrapping into three lines turns a list of
+     what is underneath into a paragraph about it. */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mosaic-page .hood-list b {
+  font-size: 12.25rem; font-weight: 700; color: #2a1f26;
+  letter-spacing: -.012em;
+}
+
+/* The one measured thing in the tile, and a link because the reader who wants
+   it wants the decision behind it. */
+.mosaic-page .hood-proof {
+  margin-top: 13rem;
+  padding-top: 10rem;
+  border-top: 1.4rem solid rgba(156, 63, 104, .16);
+  font-size: 12.25rem; font-weight: 500; line-height: 1.4;
+  letter-spacing: -.004em; color: #8c3b60;
+  text-decoration: none;
+}
+.mosaic-page .hood-proof:hover { text-decoration: underline; }
+.mosaic-page .hood-arrow { white-space: nowrap; }
+.mosaic-page .hood-proof b {
+  font-size: 15rem; font-weight: 800; color: #16121a;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========================================================== 2. features == */
+/*
+   Photographs of the real editor, one caption each -- see Features.jsx for
+   why nine rows of prose lost to four pictures, and why there is no heading
+   over them any more.
+*/
+
+.mosaic-page .features {
+  background: linear-gradient(180deg, #fcfdfd 0%, #f4f7f9 30%, #e2ebef 66%, #cedce4 100%);
+  padding: 18rem 18rem 16rem;
+  display: flex; flex-direction: column;
+}
+
+/* The frame is a fixed 2.2:1 -- the ratio capture-shots.mjs crops to -- so the
+   panel never resizes as the shot changes, which would make the list below it
+   walk up and down the card every four seconds. */
+.mosaic-page .feat-shot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2.2 / 1;
+  border-radius: 11rem;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 3rem 10rem rgba(18, 42, 54, .13), 0 0 0 1.4rem rgba(255, 255, 255, .85);
+  flex: none;
+}
+.mosaic-page .feat-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  /* `contain`, not `cover`: the four crops are not all the same shape, and
+     cover would cut the comment thread off one of them and the tab rail off
+     another -- which is the part of each picture that is the point of it. The
+     frame is white, so the letterboxing is invisible against the shots' own
+     backgrounds. */
+  object-fit: contain; object-position: center;
+  opacity: 0;
+  /* Fade OUT, then in -- not a cross-dissolve.
+
+     These are photographs of text, and two of them held at partial opacity at
+     the same time do not read as a transition: the glyphs of one interleave
+     with the glyphs of the other and the panel is a smear for the duration.
+     A symmetric `.5s` dissolve meant that on a 4.2s cycle the tile spent
+     roughly one frame in eight showing something illegible, which is a poor
+     trade for a panel whose whole job is to be looked at.
+
+     So the outgoing shot clears in .16s and the incoming one waits that long
+     before it starts, which is why the delay below matches the duration
+     above. The white frame between them reads as a deliberate beat rather
+     than as a fault. Photographs of scenery cross-dissolve fine; type does
+     not. */
+  transition: opacity .16s ease;
+}
+.mosaic-page .feat-img.is-on {
+  opacity: 1;
+  transition: opacity .24s ease .16s;
+}
+
+.mosaic-page .feat-list {
+  flex: 1; min-height: 0;
+  margin: 12rem 0 0; padding: 0;
+  list-style: none;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  gap: 3rem;
+}
+
+/* A button, because it selects the picture above it -- so it needs the
+   keyboard and the pressed state, and the row cannot be a bare <li>. */
+.mosaic-page .feat {
+  width: 100%;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 1rem;
+  /* 3.5 vertical, not 5: five rows share the height of this cell. */
+  padding: 3.5rem 8rem;
+  border: 0; border-radius: 8rem;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background .18s;
+}
+.mosaic-page .feat:hover { background: rgba(255, 255, 255, .5); }
+.mosaic-page .feat.is-on { background: rgba(255, 255, 255, .78); }
+
+.mosaic-page .feat b {
+  font-size: 13rem; font-weight: 700; letter-spacing: -.018em;
+  color: #0e1c22; line-height: 1.2;
+}
+.mosaic-page .feat-note {
+  font-size: 11.5rem; font-weight: 400; line-height: 1.3;
+  letter-spacing: -.006em; color: #55707a;
+}
+
+.mosaic-page .feat-also {
+  margin: 10rem 0 0;
+  font-size: 11rem; font-weight: 400; line-height: 1.35;
+  letter-spacing: -.004em; color: #6b838c;
+}
+
+/* ======================================================= 3. introduction == */
+/*
+   The centre panel. It held the engine comparison and its live demo for the
+   whole life of this page; both moved to the foot, and this says what the
+   site is -- see Landing.jsx for why the largest panel is the one that has to
+   answer that.
+*/
+
+.mosaic-page .intro {
+  background:
+    radial-gradient(90% 70% at 6% 0%, rgba(226, 236, 200, .9) 0%, rgba(226, 236, 200, 0) 70%),
+    linear-gradient(168deg, #e2ebc9 0%, #e9f0c4 48%, #f0f4b8 78%, #f3f5b0 100%);
+  display: block;
+  color: inherit;
+}
+
+.mosaic-page .intro-pad {
+  height: 100%;
+  padding: 34rem 45rem 30rem;
+  display: flex; flex-direction: column; align-items: flex-start;
+  /* Centred, not top-aligned: the copy is shorter than the cell, and slack
+     collected under it reads as a panel with something missing rather than as
+     a panel with room. */
+  justify-content: center;
+}
+
+.mosaic-page .intro :is(h1, h2) {
+  margin: 0;
+  font-size: 35rem; font-weight: 800; line-height: 1.28;
+  letter-spacing: -.03em; color: #15201a;
+}
+.mosaic-page .intro :is(h1, h2) .g { color: #5f8b3e; }
+
+.mosaic-page .intro-copy {
+  margin: 16rem 0 0;
+  max-width: 500rem;
+  font-size: 15rem; font-weight: 400; line-height: 1.45;
+  letter-spacing: -.012em; color: #1e2a1b;
+}
+
+/* The field and the button, on one line: this is the end of the sentence
+   above them, so it is one gesture rather than a panel of options. */
+.mosaic-page .intro-do {
+  margin-top: 26rem;
+  width: 100%;
+  display: flex; align-items: center; gap: 10rem;
+}
+
+.mosaic-page .intro-new {
+  flex: none;
+  padding: 0 18rem;
+  height: 46rem;
+  border-radius: 999rem;
+  font-family: inherit;
+  font-size: 13.5rem; font-weight: 600; line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  background: #40662a;
+  border: 1.4rem solid #40662a;
+  color: #fff;
+}
+.mosaic-page .intro-new:hover { background: #2f4d1e; border-color: #2f4d1e; }
+
+/* ---- the live document in the introduction ---- */
+/*
+   Two real Y.Docs merging in front of the reader; see IntroDemo.jsx. Styled as
+   a document rather than as a widget, because the claim it makes is "this is
+   what using it looks like" and a widget looks like a diagram of one.
+*/
+.mosaic-page .intro-doc {
+  width: 100%;
+  margin-top: 20rem;
+  border-radius: 12rem;
+  background: rgba(255, 255, 255, .84);
+  box-shadow: 0 4rem 16rem rgba(64, 74, 44, .13), 0 0 0 1.4rem rgba(255, 255, 255, .9);
+  padding: 12rem 16rem 14rem;
+}
+
+.mosaic-page .id-head {
+  display: flex; align-items: center; gap: 8rem;
+  padding-bottom: 9rem;
+  border-bottom: 1.2rem solid rgba(64, 102, 42, .13);
+}
+.mosaic-page .id-title {
+  font-size: 12rem; font-weight: 700; letter-spacing: -.014em; color: #24301d;
+}
+.mosaic-page .id-people { margin-left: auto; display: flex; gap: 4rem; }
+.mosaic-page .id-chip {
+  width: 19rem; height: 19rem; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 9.5rem; font-weight: 700; color: #fff;
+  box-shadow: 0 0 0 1.6rem rgba(255, 255, 255, .9);
+}
+
+.mosaic-page .id-body {
+  margin: 10rem 0 0;
+  padding-top: 7rem;
+  /* A fixed height for the finished sentence. Without it the panel grows by a
+     line as the paragraph wraps and shoves the field below it down the card,
+     twice per cycle. */
+  min-height: 86rem;
+  font-size: 13.5rem; font-weight: 400;
+  /* Airy on purpose: the name flags live in the leading. At 1.45 they sat on
+     top of the following word, which reads as a rendering fault rather than
+     as somebody's cursor. */
+  line-height: 1.95;
+  letter-spacing: -.01em; color: #1d2a1a;
+}
+.mosaic-page .id-b { font-weight: 700; }
+
+/* The caret is 1.5 units of colour with a name on it -- the same shape the
+   editor's own remote cursors take, which is the point of drawing it. */
+.mosaic-page .id-caret {
+  position: relative;
+  display: inline-block;
+  width: 1.6rem; height: 14rem;
+  margin: 0 0 -2rem;
+  vertical-align: baseline;
+  border-radius: 1rem;
+}
+.mosaic-page .id-flag {
+  position: absolute;
+  left: -1rem; top: -13rem;
+  padding: .5rem 3.5rem;
+  border-radius: 3rem 3rem 3rem 0;
+  /* 10, not the 8 a cursor label wants to be: the responsive harness enforces
+     an 8px floor with no exemptions, and 8 units render at 7.1px on a 1280
+     laptop. The tablet block takes it to 12 for the same reason. */
+  font-size: 10rem; font-weight: 700; letter-spacing: -.005em; line-height: 1.3;
+  color: #fff; white-space: nowrap;
+}
+
+/* The row carries the margin now, so adding a second item to it cannot change
+   the card's height -- both sit on one baseline. */
+.mosaic-page .intro-links {
+  margin-top: 13rem;
+  display: flex; align-items: baseline; gap: 8rem;
+}
+.mosaic-page .intro-sep { color: #9aab9c; font-size: 12.5rem; line-height: 1; }
+
+/* A button that reads as a link: it opens a dialog rather than navigating, so
+   it cannot be an <a>, but it is the same weight of offer as the one beside
+   it and should not look louder. */
+.mosaic-page .intro-import {
+  padding: 0; border: 0; background: none;
+  font-family: inherit;
+  font-size: 12.5rem; font-weight: 600; letter-spacing: -.008em;
+  color: #40662a;
+  cursor: pointer;
+}
+.mosaic-page .intro-import:hover { text-decoration: underline; }
+
+.mosaic-page .intro .docs-link {
+  margin-top: 0;
+  font-size: 12.5rem; font-weight: 600; letter-spacing: -.008em;
+  color: #40662a; text-decoration: none;
+}
+.mosaic-page .intro .docs-link:hover { text-decoration: underline; }
+
+/* ==================================================== 5. the demonstration == */
+/*
+   The band across the foot of the page. It was the lower half of the centre
+   panel, where it was the page's opening claim; down here it is the evidence
+   for the claim the centre now makes, which is the job it can actually do.
+*/
+
+.mosaic-page .demo-strip {
+  background:
+    radial-gradient(70% 140% at 4% 0%, rgba(226, 236, 200, .85) 0%, rgba(226, 236, 200, 0) 70%),
+    linear-gradient(100deg, #e7efcd 0%, #eef2c2 46%, #f2f5b4 100%);
+  padding: 16rem 24rem 15rem;
+  display: flex; align-items: stretch; gap: 24rem;
+  color: inherit;
+}
+
+/* The words the band is evidence for, down its left edge. Narrow on purpose:
+   the panes are the content here, and this is their caption. */
+.mosaic-page .strip-lede {
+  flex: none; width: 232rem;
+  display: flex; flex-direction: column; justify-content: center;
+  min-width: 0;
+}
+.mosaic-page .strip-lede h2 {
+  margin: 0;
+  font-size: 17rem; font-weight: 800; line-height: 1.15;
+  letter-spacing: -.026em; color: #15201a;
+}
+.mosaic-page .strip-lede p {
+  margin: 6rem 0 0;
+  font-size: 10.5rem; font-weight: 400; line-height: 1.4;
+  letter-spacing: -.008em; color: #33422b;
+}
+
+/* Not in the reference: the band has to be the way into the lab. A real <a>,
+   so it needs its own underline reset. */
+.mosaic-page .demo-strip .go {
+  margin-top: 8rem;
+  display: inline-flex; align-items: center; gap: 7rem;
+  font-size: 12rem; font-weight: 600; letter-spacing: -.012em;
+  color: #40662a;
+  text-decoration: none;
+}
+.mosaic-page .demo-strip:hover .go { color: #2f4d1e; }
+.mosaic-page .demo-strip:hover .go .arrow { transform: translateX(3rem); }
+.mosaic-page .demo-strip .go .arrow { transition: transform .18s cubic-bezier(.16, 1, .3, 1); }
+
+/* Two engines, real Y.Docs and a real TextOperation, one partition -- see
+   LiveDemo.jsx for why it runs in memory rather than over a socket, and why
+   the two rows end differently. */
+
+/* The stretched link. `.go` is an ordinary focusable <a>; its ::after covers
+   the whole card so clicking anywhere still opens the lab.
+   The stacking order here is load-bearing and was wrong once: at z-index 1
+   the overlay sat UNDER `.demo` (z-index 2), so the replica panes swallowed
+   every click aimed at the card and the card stopped opening the lab at all.
+   The overlay goes above the panes; only `.demo-foot`, which holds the actual
+   button, goes above the overlay. */
+.mosaic-page .demo-strip .go::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.mosaic-page .demo {
+  /* Static, filling its own card. Absolute positioning here would pin the
+     demo to a top offset that has to be re-derived every time the copy above
+     it changes length, once per layout. */
+  flex: 1 1 auto; min-width: 0;
+  /* No z-index, which is the point: a z-index here would make this a stacking
+     context and trap `.demo-foot` inside it, below the card-wide link overlay
+     -- and the one control on this panel would stop being clickable. The
+     panes paint under the overlay; the foot lifts itself over it. */
+  display: flex; flex-direction: column; gap: 7rem;
+}
+
+/* Side by side in the band; the tablet and phone blocks put them back in a
+   column, where the cell is tall rather than wide. */
+.mosaic-page .demo-engines {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: row; gap: 22rem;
+}
+
+/* Each engine's label goes above its pair here rather than down its side: a
+   40-unit label column inside a half-width group is most of the width the
+   panes have left to say anything in. */
+.mosaic-page .demo-strip .demo-row {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  row-gap: 2rem;
+}
+.mosaic-page .demo-strip .demo-engine { grid-column: 1; grid-row: 1; align-self: start; font-size: 10rem; }
+.mosaic-page .demo-strip .demo-panes  { grid-column: 1; grid-row: 2; }
+.mosaic-page .demo-strip .demo-verdict { grid-column: 1; grid-row: 3; margin-top: 2rem; }
+
+/* One engine: its name down the left, its two replicas beside it. */
+.mosaic-page .demo-row {
+  flex: 1 1 0; min-height: 0;
+  display: grid;
+  grid-template-columns: 40rem minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  column-gap: 10rem;
+}
+
+.mosaic-page .demo-engine {
+  grid-column: 1; grid-row: 1;
+  align-self: center;
+  font-size: 11rem; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #46603a;
+}
+
+.mosaic-page .demo-panes {
+  grid-column: 2; grid-row: 1;
+  display: flex; gap: 10rem; min-height: 0;
+}
+
+.mosaic-page .demo-pane {
+  flex: 1 1 0;
+  min-width: 0;
+  background: rgba(255, 255, 255, .88);
+  border: 1.6rem solid #fff;
+  border-radius: 9rem;
+  padding: 7rem 10rem 8rem;
+  box-shadow: 0 6rem 14rem rgba(64, 74, 44, .12);
+  transition: transform .45s cubic-bezier(.16, 1, .3, 1), box-shadow .45s;
+  overflow: hidden;
+}
+/* Partitioned panes drift apart. The motion is the point: the two documents
+   are no longer talking, and a static badge alone reads as decoration. */
+.mosaic-page .demo-pane.cut { box-shadow: 0 6rem 14rem rgba(150, 90, 40, .2); }
+.mosaic-page .demo-panes .demo-pane.cut:first-child { transform: translateX(-4rem) rotate(-.6deg); }
+.mosaic-page .demo-panes .demo-pane.cut:last-child { transform: translateX(4rem) rotate(.6deg); }
+
+.mosaic-page .demo-pane-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 6rem; margin-bottom: 3rem;
+}
+
+/* 9.5 and not 9: the desktop stage resolves to ~0.885px per unit on a 1280
+   laptop, where 9 renders at 7.97px and trips the 8px floor the responsive
+   harness enforces. */
+.mosaic-page .demo-replica {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9.5rem; letter-spacing: .04em; text-transform: uppercase;
+  color: #6c7a5c;
+}
+.mosaic-page .demo-badge {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9.5rem; letter-spacing: .02em;
+  padding: 1rem 5rem; border-radius: 4rem;
+  background: rgba(214, 138, 60, .17); color: #8a4f1a;
+}
+.mosaic-page .demo-text {
+  margin: 0;
+  font-size: 11.5rem; line-height: 1.3; letter-spacing: -.008em;
+  color: #22301c;
+}
+
+/* The verdict, once the partition has healed. It is the only text on this
+   panel that states a conclusion rather than showing one, so it appears only
+   at the end, when the documents above it are the evidence for it. */
+.mosaic-page .demo-verdict {
+  grid-column: 2; grid-row: 2;
+  margin-top: 4rem;
+  font-size: 10rem; font-weight: 700; letter-spacing: -.005em;
+}
+.mosaic-page .demo-verdict.is-ok   { color: #3a6624; }
+.mosaic-page .demo-verdict.is-lost { color: #8f3d1d; }
+.mosaic-page .demo-row-lost .demo-engine { color: #8a5230; }
+
+.mosaic-page .demo-foot {
+  display: flex; align-items: center; gap: 9rem;
+  /* Above the stretched link, so the button is a button. */
+  position: relative; z-index: 4;
+}
+
+.mosaic-page .demo-cut {
+  font-family: inherit;
+  font-size: 10.5rem; font-weight: 700; letter-spacing: -.008em;
+  padding: 5rem 11rem;
+  border-radius: 999rem;
+  border: 1.4rem solid rgba(64, 102, 42, .35);
+  background: rgba(255, 255, 255, .82);
+  color: #2f4d1e;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .16s, border-color .16s;
+}
+.mosaic-page .demo-cut:hover {
+  background: #fff;
+  border-color: rgba(64, 102, 42, .7);
+}
+
+.mosaic-page .demo-dot {
+  width: 6rem; height: 6rem; border-radius: 50%;
+  background: #c47f33; flex: none;
+}
+.mosaic-page .demo-dot.ok { background: #4d7c2f; }
+.mosaic-page .demo-label {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10rem; color: #40662a; letter-spacing: -.005em;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ============================================================ 4. insights == */
+
+.mosaic-page .insights {
+  background:
+    radial-gradient(115% 70% at 22% 0%, #fdf2e5 0%, rgba(253, 242, 229, 0) 68%),
+    linear-gradient(180deg, #f9f1e8 0%, #f7efe6 100%);
+  /* Was 29/25/23/21 in the 388-unit cell. The sides come in because every
+     unit of horizontal padding is a unit off the bars, which are the part of
+     this panel with the least to spare. */
+  padding: 26rem 19rem 21rem 19rem;
+  display: flex; flex-direction: column;
+}
+.mosaic-page .tag {
+  align-self: flex-start;
+  height: 31rem;
+  display: inline-flex; align-items: center;
+  padding: 0 17rem;
+  border-radius: 999rem;
+  margin-left: 4rem;
+  background: linear-gradient(100deg, #ffffff 18%, #fdeadb 100%);
+  border: 1.2rem solid rgba(255, 255, 255, .9);
+  box-shadow: 0 3rem 9rem rgba(160, 120, 80, .09);
+  font-size: 12rem; font-weight: 700; letter-spacing: -.01em; color: #111;
+}
+.mosaic-page .insights h2 {
+  margin: 17rem 0 0;
+  font-size: 34rem; font-weight: 800; letter-spacing: -.035em; line-height: 1; color: #0b0b0b;
+}
+/* Two lines by design, so it needs a line-height rather than the browser's.
+   This names both sides of the ratio above it (see Landing.jsx), which no
+   one-line version of the sentence could do, and the chart's `margin-top:
+   auto` means the second line is paid for out of the card's slack. The
+   tablet cell has the least of that slack of any layout -- see the override
+   in the tablet block, which exists because this sentence is what pushed the
+   axis out of its own card there. */
+.mosaic-page .insights .sub {
+  margin-top: 10rem;
+  max-width: none;
+  font-size: 13.5rem; font-weight: 400; line-height: 1.24;
+  letter-spacing: -.012em; color: #1d1d1d;
+}
+
+/* Sits between the figure and the chart, where the reader is when the ratio
+   stops making sense. The chart's `margin-top: auto` still pins the bars to
+   the bottom of the card, so this is spending slack rather than height. */
+.mosaic-page .insights-why {
+  margin: 11rem 0 0;
+  max-width: none;
+  font-size: 11rem; font-weight: 400; line-height: 1.42;
+  letter-spacing: -.008em; color: #4a4238;
+}
+
+.mosaic-page .chart {
+  margin-top: auto;
+  /* 294 while this cell was 501 tall, then 231 when the bottom row took 34
+     units for the demo band, and 196 now the panel has traded cells with the
+     feature shots and is 22 units shorter again. The bars were rescaled with
+     it each time (see DELTA in Landing.jsx): the curve is presentation, the
+     printed ratios are the measurement, and only the first of those may be
+     resized.
+
+     The gap comes down with the width. Seven bars and six 13-unit gaps in a
+     292-unit column leaves each bar 30 units, which is under the width of the
+     "578x" printed inside the last one; at 9 it is 34 and the label has room.
+     Whitespace between bars is the cheapest thing in this cell. */
+  height: 196rem;
+  display: flex; align-items: flex-end; gap: 9rem;
+}
+.mosaic-page .col { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.mosaic-page .bar {
+  width: 100%;
+  background: #e9e3da;
+  border-radius: 7rem;
+  padding-top: 9rem;
+  display: flex; justify-content: center;
+  font-size: 13rem; font-weight: 500;
+  /* Darkened from #a1978a, which was 2.25:1 against the bar it sits on --
+     a number ON a chart is the one label that cannot be decorative. */
+  color: #655e54;
+}
+.mosaic-page .bar.hot {
+  background: linear-gradient(180deg, #f2b705 0%, #e7b208 26%, #a8a422 52%, #6a8f33 76%, #3d7a3e 100%);
+  color: #fff; font-weight: 600;
+  box-shadow: 0 4rem 12rem rgba(150, 120, 20, .20);
+}
+.mosaic-page .day {
+  margin-top: 10rem;
+  font-size: 10.4rem; font-weight: 500; letter-spacing: .05em;
+  /* Same correction as .bar above: an axis label is not decoration. */
+  color: #6b6155;
+}
+
+/* =============================================================== 6. field == */
+/*
+   The search-and-create field. It had a lilac panel of its own across the
+   foot -- a heading, the field, a create button and a link into /docs -- and
+   it is inside the introduction now: an introduction that ends in "so go and
+   open one" should hand you the thing you open it with, and the foot was
+   needed for the demonstration.
+*/
+
+.mosaic-page .bar-search {
+  /* Was `margin-left: auto` and 612 units wide, pushed to the far edge of a
+     1025-unit panel. It shares a row with the create button now and takes
+     what that leaves. */
+  flex: 1 1 auto; min-width: 0;
+  position: relative;
+  height: 46rem;
+  border-radius: 999rem;
+  background: #fff;
+  box-shadow: 0 4rem 14rem rgba(70, 66, 120, .10);
+  display: flex; align-items: center;
+  padding: 0 22rem 0 10rem;
+  gap: 16rem;
+}
+.mosaic-page .mag {
+  width: 32rem; height: 32rem; border-radius: 50%;
+  background: #f1f1f5;
+  display: grid; place-items: center; flex: none;
+}
+.mosaic-page .bar-search input {
+  flex: 1; min-width: 0;
+  border: 0; outline: 0; background: none;
+  font-family: inherit;
+  font-size: 14rem; font-weight: 400; letter-spacing: -.015em; color: #17171c;
+}
+.mosaic-page .bar-search input::placeholder { color: #8c8c99; }
+
+/*
+   No results menu drops out of this field, so there are no styles for one.
+   The field still matches -- Enter opens the best hit -- it just does not
+   recite document titles onto the front page.
+*/
+
+/* ========================================================== entrance == */
+
+html.motion-pending .mosaic-page .card { opacity: 0; visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  html.motion-pending .mosaic-page .card { opacity: 1; visibility: visible; }
+  .mosaic-page * { animation: none !important; }
+}
+
+@keyframes panel-settle {
+  from { opacity: 0; translate: 0 12rem; scale: .988; clip-path: inset(3% round 22rem); }
+  62%  { opacity: 1; }
+  to   { opacity: 1; translate: 0 0; scale: 1; clip-path: inset(0% round 22rem); }
+}
+@keyframes type-unmask {
+  from { opacity: 0; translate: 0 16rem; clip-path: inset(0 0 96% 0); }
+  to   { opacity: 1; translate: 0 0; clip-path: inset(0 0 0 0); }
+}
+@keyframes content-rise {
+  from { opacity: 0; translate: 0 9rem; }
+  to   { opacity: 1; translate: 0 0; }
+}
+@keyframes receipt-arrive {
+  from { opacity: 0; translate: 0 10rem; scale: .982; }
+  to   { opacity: 1; translate: 0 0; scale: 1; }
+}
+@keyframes list-arrive {
+  from { opacity: 0; translate: 0 11rem; }
+  to   { opacity: 1; translate: 0 0; }
+}
+@keyframes chart-unmask {
+  from { opacity: 0; translate: 0 10rem; clip-path: inset(100% 0 0 0); }
+  to   { opacity: 1; translate: 0 0; clip-path: inset(0 0 0 0); }
+}
+@keyframes search-resolve {
+  from { opacity: 0; translate: 12rem 0; scale: .975 1; }
+  to   { opacity: 1; translate: 0 0; scale: 1 1; }
+}
+
+html.entrance-run .mosaic-page .card {
+  will-change: opacity, translate, scale, clip-path;
+  animation-fill-mode: backwards;
+  animation-timing-function: cubic-bezier(.16, 1, .3, 1);
+}
+html.entrance-run .mosaic-page .intro    { animation: panel-settle .82s cubic-bezier(.16,1,.3,1) .04s backwards; }
+html.entrance-run .mosaic-page .internals    { animation: panel-settle .66s cubic-bezier(.16,1,.3,1) .10s backwards; }
+html.entrance-run .mosaic-page .insights { animation: panel-settle .74s cubic-bezier(.16,1,.3,1) .14s backwards; }
+html.entrance-run .mosaic-page .features  { animation: panel-settle .74s cubic-bezier(.16,1,.3,1) .20s backwards; }
+html.entrance-run .mosaic-page .demo-strip { animation: panel-settle .68s cubic-bezier(.16,1,.3,1) .28s backwards; }
+
+html.entrance-run .mosaic-page .intro :is(h1, h2)  { animation: type-unmask .78s cubic-bezier(.22,1,.36,1) .20s backwards; }
+html.entrance-run .mosaic-page .intro-copy   { animation: content-rise .54s cubic-bezier(.16,1,.3,1) .48s backwards; }
+html.entrance-run .mosaic-page .intro-do     { animation: content-rise .54s cubic-bezier(.16,1,.3,1) .60s backwards; }
+html.entrance-run .mosaic-page .intro .intro-links { animation: content-rise .54s cubic-bezier(.16,1,.3,1) .68s backwards; }
+html.entrance-run .mosaic-page .hood-wrap    { animation: receipt-arrive .62s cubic-bezier(.16,1,.3,1) .38s backwards; }
+
+/* The shot and its captions arrive as one block, not four staggered rows: a
+   list that deals itself out like a hand of cards is a reader waiting to be
+   allowed to read. */
+html.entrance-run .mosaic-page .feat-shot     { animation: content-rise .58s cubic-bezier(.16,1,.3,1) .52s backwards; }
+html.entrance-run .mosaic-page .feat-list     { animation: list-arrive .62s cubic-bezier(.16,1,.3,1) .74s backwards; }
+
+html.entrance-run .mosaic-page .insights .tag { animation: content-rise .46s cubic-bezier(.16,1,.3,1) .44s backwards; }
+html.entrance-run .mosaic-page .insights h2   { animation: type-unmask .62s cubic-bezier(.22,1,.36,1) .56s backwards; }
+html.entrance-run .mosaic-page .insights .sub { animation: content-rise .44s cubic-bezier(.16,1,.3,1) .75s backwards; }
+html.entrance-run .mosaic-page .chart         { animation: chart-unmask .86s cubic-bezier(.16,1,.3,1) .72s backwards; }
+
+html.entrance-run .mosaic-page .strip-lede h2 { animation: type-unmask .56s cubic-bezier(.22,1,.36,1) .72s backwards; }
+html.entrance-run .mosaic-page .bar-search    { animation: search-resolve .70s cubic-bezier(.16,1,.3,1) .88s backwards; transform-origin: right center; }
+
+/* `translate` and `scale` are used as separate properties rather than inside
+   a `transform`, so a keyframe can move a panel without clobbering any static
+   transform the panel already carries. */
+
+/* ============================================================ tablet == */
+
+@media (min-width: 701px) and (max-width: 1040px) and (max-aspect-ratio: 3/2) {
+  /* 1004 = the 918 stage, the nav's 34 and its 14 gap, and the footer's 26
+     and its 12 -- same arithmetic as the desktop knob. */
+  html.mosaic { font-size: min(calc(95vw / 1025), calc(94vh / 1004)); }
+
+  .mosaic-page .mosaic-nav { width: 1025rem; }
+  .mosaic-page .mosaic-foot { width: 1025rem; }
+  .mosaic-page .mosaic-foot p { font-size: 12.5rem; max-width: none; }
+  /* The legibility floor applies to the map as much as to the panels. */
+  .mosaic-page .nav-brand { font-size: 17rem; }
+  .mosaic-page .nav-links a { font-size: 15rem; }
+  .mosaic-page .nav-links { gap: 20rem; }
+
+  .mosaic-page .stage {
+    width: 1025rem; height: 918rem;
+    grid-template-columns: 627rem 388rem;
+    /* The third row is deep because the demonstration needs panes wide enough
+       not to wrap a short sentence into four lines and deep enough to show
+       them, and its caption sits above the panes rather than beside them
+       (below). The three rows plus their two 9-unit gaps total 918. */
+    grid-template-rows: 446rem 194rem 260rem;
+  }
+  .mosaic-page .intro      { grid-column: 1; grid-row: 1; }
+  .mosaic-page .internals      { grid-column: 1; grid-row: 2; }
+  .mosaic-page .demo-strip { grid-column: 1; grid-row: 3; }
+  .mosaic-page .insights   { grid-column: 2; grid-row: 1; }
+  .mosaic-page .features   { grid-column: 2; grid-row: 2 / span 2; }
+
+  /* The band is 627 units wide here rather than 1025, and four panes across
+     that is 135 units each -- narrower than the sentence they hold. So the
+     engines go back into a column, which is the arrangement they had for the
+     whole time this was a tall panel, and the label goes back beside its pair
+     rather than above it.
+
+     The caption goes above the panes for the same arithmetic: as a 200-unit
+     column beside them it left each pane 155 units, which wrapped "The quick
+     brown fox jumps over the lazy dog" onto four lines and clipped the last
+     two. */
+  .mosaic-page .demo-strip { padding: 13rem 20rem 12rem; gap: 8rem; flex-direction: column; }
+  .mosaic-page .demo-strip .demo-engines { gap: 7rem; }
+  .mosaic-page .demo-strip .demo { gap: 5rem; }
+  /* Above the panes and on ONE line -- heading, sentence, link -- because
+     stacked it stood 85 units tall out of the band's 260 and left the panes
+     45, which is 25 short of the two lines they hold. */
+  .mosaic-page .strip-lede {
+    width: 100%;
+    flex-direction: row; align-items: baseline; gap: 14rem;
+  }
+  .mosaic-page .strip-lede h2 { flex: none; }
+  .mosaic-page .strip-lede p { flex: 1 1 auto; margin: 0; min-width: 0; }
+  .mosaic-page .demo-strip .go { flex: none; margin-top: 0; }
+  .mosaic-page .demo-engines { flex-direction: column; gap: 9rem; }
+  .mosaic-page .demo-strip .demo-row {
+    grid-template-columns: 40rem minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    row-gap: 0;
+  }
+  .mosaic-page .demo-strip .demo-engine { grid-column: 1; grid-row: 1; align-self: center; font-size: 12rem; }
+  .mosaic-page .demo-strip .demo-panes  { grid-column: 2; grid-row: 1; }
+  .mosaic-page .demo-strip .demo-verdict { grid-column: 2; grid-row: 2; }
+  /* The last 14 units the panes were short of their own two lines, taken off
+     the chrome around the text rather than out of the text: the replica line
+     is the only thing in this band anybody reads. */
+  .mosaic-page .demo-strip .demo-pane { padding: 5rem 8rem 6rem; }
+  .mosaic-page .demo-strip .demo-pane-head { margin-bottom: 1rem; }
+  .mosaic-page .demo-strip .demo-text { font-size: 13.5rem; line-height: 1.25; }
+  .mosaic-page .demo-strip .demo-cut { padding: 4rem 9rem; font-size: 12rem; }
+
+  /* The panel is a wide column of its own here, so the copy is capped and
+     centred as a block rather than being re-laid-out. */
+  .mosaic-page .internals { padding: 20rem 22rem; }
+  .mosaic-page .hood-wrap { width: 100%; max-width: 560rem; margin: 0 auto; }
+
+  .mosaic-page .intro-pad { padding: 30rem 34rem; }
+  .mosaic-page .id-flag { font-size: 12rem; top: -15rem; }
+  .mosaic-page .id-body { font-size: 15rem; min-height: 96rem; }
+  .mosaic-page .id-title { font-size: 14rem; }
+  /* The avatar initial is a single letter and still body text as far as the
+     floor is concerned. 9.5 units renders at 6.6px here. */
+  .mosaic-page .id-chip { width: 23rem; height: 23rem; font-size: 12rem; }
+  .mosaic-page .intro-copy { font-size: 17rem; max-width: 540rem; }
+  .mosaic-page .intro-new { font-size: 15rem; height: 50rem; }
+  .mosaic-page .intro .docs-link { font-size: 14rem; }
+  .mosaic-page .strip-lede h2 { font-size: 19rem; }
+  .mosaic-page .strip-lede p { font-size: 12.5rem; }
+  .mosaic-page .demo-strip .go { font-size: 13rem; }
+
+  /*
+   * Legibility floor. The tablet stage is 1025 units wide, so on a 744px screen
+   * everything renders at 69% of design size, which lands the smallest labels
+   * under 8px at their authored sizes. These are bumped until they clear the
+   * floor; tools/responsive-test.mjs asserts it.
+   */
+  .mosaic-page .hood-list { gap: 5rem; }
+  .mosaic-page .hood-list li { font-size: 13rem; line-height: 1.22; }
+  .mosaic-page .hood-list b { font-size: 14rem; }
+  /* The legibility floor above spends everything this 210-unit tile has;
+     the rule takes its last few units back off the chrome around the
+     receipt rather than out of the type. */
+  .mosaic-page .hood-proof { font-size: 12.5rem; margin-top: 9rem; padding-top: 7rem; }
+  .mosaic-page .hood-proof b { font-size: 15rem; }
+  /* The tablet cell is the shortest this panel ever gets, and the legibility
+     floor above spends most of its budget: the row captions go from 10 to 12.
+     The gaps come down to pay for it, which is the right side to take it from
+     -- eight rows that are readable and close together beat six that are
+     spaced and cut off. */
+  .mosaic-page .features { padding: 20rem 20rem 14rem; }
+  .mosaic-page .feat-list { margin-top: 10rem; gap: 4rem; }
+  .mosaic-page .feat b { font-size: 14rem; }
+  .mosaic-page .feat-note { font-size: 13rem; }
+  .mosaic-page .feat-also { font-size: 12.5rem; }
+  /* The legibility bump on the axis labels is what makes this cell tight: a
+     265-unit bar plus a 12.6-unit label plus its margin is the whole 294 the
+     chart box has, so the explainer above has to be paid for out of the
+     chrome around the chart rather than out of the bars. Without this the
+     axis runs 3-4px past the bottom of its own card -- invisible to the
+     harness's clipping check, which excludes bottom overflow by design, and
+     the reason `7f` below measures it directly. */
+  /* This cell is 446 units tall against the desktop's 467, and it carries the
+     legibility bumps below on top of that, which is why it is the layout that
+     runs out first. The subhead wraps to three lines here and three lines at
+     the desktop size is what pushed the axis 24px clear of the bottom of the
+     card. The chrome above the chart pays for them: the top padding and the
+     heading are the slack, the bars are not -- rescaling those would mean
+     redrawing a measurement to fit a box. */
+  .mosaic-page .insights { padding-top: 17rem; padding-bottom: 16rem; }
+  .mosaic-page .insights h2 { font-size: 33rem; margin-top: 12rem; }
+  .mosaic-page .insights .sub { font-size: 12.6rem; margin-top: 8rem; max-width: none; }
+  .mosaic-page .insights-why { font-size: 13rem; margin-top: 8rem; }
+  .mosaic-page .tag { font-size: 13rem; }
+  .mosaic-page .day { font-size: 12.6rem; margin-top: 6rem; }
+
+  /* The tablet stage resolves to ~0.69px per unit, the harshest scale of any
+     layout, so the demo band's labels need the largest bump. Kept below
+     .demo-text so the pane still reads text-first. */
+  .mosaic-page .demo-replica { font-size: 12.5rem; }
+  .mosaic-page .demo-badge   { font-size: 12.5rem; }
+  .mosaic-page .demo-label   { font-size: 13rem; }
+  .mosaic-page .demo-text    { font-size: 15rem; }
+  /* The engine name and its verdict. At the base sizes these land at
+     6.9-7.2px on an iPad Mini. */
+  .mosaic-page .demo-engine  { font-size: 12rem; }
+  .mosaic-page .demo-verdict { font-size: 12rem; }
+  .mosaic-page .demo-cut     { font-size: 12rem; }
+}
+
+/* ============================================================ mobile == */
+
+/*
+ * Also catches SHORT viewports, not just narrow ones.
+ *
+ * The reference breakpoints only test width, so a phone in landscape (844x390)
+ * falls through to the full desktop composition and the scale knob resolves to
+ * 1rem = 0.55px -- which renders the toast subtitle at 5.5px. Anything under
+ * ~520px tall gets the stacked, scrollable layout instead.
+ */
+@media (max-width: 700px), (max-height: 520px) {
+  html.mosaic { font-size: calc((min(100vw, 560px) - 30px) / 375); }
+  html.mosaic body {
+    display: block;
+    overflow-y: auto;
+    padding: 15px 0;
+    min-height: 0;
+  }
+
+  /* One row that scrolls, not two rows that wrap.
+
+     The wrapping version was written for five links and there are six, so the
+     row broke 5 + 1 and left "Decisions" alone on a line of its own -- which
+     reads as a layout that ran out rather than as a second row of a menu. The
+     fixes that keep the wrap all fail on the same arithmetic: the six labels
+     do not divide into two balanced rows at any type size this nav is allowed
+     to use, so the break lands somewhere ugly whatever the gap is.
+
+     A single scrolling row is the ordinary mobile answer and it has no such
+     dependency on how many links there are -- the seventh route will cost
+     nothing. The scrollbar is hidden because it would sit across the labels
+     at this height, and the mask below is what replaces it: the last link
+     fades at the right edge, which is the affordance that says there is more.
+
+     `overflow-x` here does NOT reintroduce the page-level horizontal scroll
+     the old comment was guarding against. That came from links overflowing
+     the BODY; this is a contained scroller, and the measurement harness
+     checks the document, not this element. */
+  .mosaic-page .mosaic-nav {
+    width: 375rem; height: auto;
+    margin: 0 auto 13rem;
+    flex-wrap: wrap;
+    gap: 10rem 16rem;
+  }
+  .mosaic-page .nav-brand { font-size: 16rem; }
+  .mosaic-page .nav-links {
+    order: 3; margin-right: 0; gap: 18rem; width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    /* Room for the fade, so the last label is not sitting under it. */
+    padding-right: 22rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(to right, #000 calc(100% - 22rem), transparent 100%);
+  }
+  .mosaic-page .nav-links::-webkit-scrollbar { display: none; }
+  .mosaic-page .nav-links a { font-size: 14rem; padding: 0; white-space: nowrap; }
+
+  .mosaic-page .stage {
+    width: 375rem; height: auto;
+    margin: 0 auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    row-gap: 13rem;
+  }
+  .mosaic-page .card { grid-column: 1 !important; grid-row: auto !important; }
+
+  /* Fourth, not first. This tile is a receipt, and opening the phone layout
+     with a receipt for a claim nobody has read yet says nothing. Auto height:
+     a heading, a figure and two lines, all of which re-wrap at 375 units
+     wide. */
+  .mosaic-page .internals    { order: 4; height: auto; padding: 20rem 18rem; }
+  /* The introduction leads the stack and the demonstration follows it -- the
+     same order the desktop composition reads in. Auto height for both: this
+     layout is a column, so it can add its content up, and the demo has its own
+     card rather than an offset that has to be kept in step with a copy
+     block. */
+  .mosaic-page .intro      { order: 1; height: auto; }
+  .mosaic-page .demo-strip { order: 2; height: auto; flex-direction: column; gap: 14rem; padding: 20rem 18rem; }
+  .mosaic-page .strip-lede { width: 100%; }
+  .mosaic-page .demo-engines { flex-direction: column; gap: 9rem; }
+  /* `flex: 1 1 0` on the rows is right in a card of fixed height and wrong in
+     one that is sized by its content: with nothing to divide up, both rows
+     resolve to a zero basis and the replica text is clipped by its own pane.
+     Here the panes size themselves and the card adds them up. */
+  .mosaic-page .demo-strip .demo-row { flex: 0 0 auto; }
+  .mosaic-page .demo-strip .demo-row {
+    grid-template-columns: 34rem minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    row-gap: 0;
+  }
+  .mosaic-page .demo-strip .demo-engine { grid-column: 1; grid-row: 1; align-self: center; font-size: 10rem; }
+  .mosaic-page .demo-strip .demo-panes  { grid-column: 2; grid-row: 1; }
+  .mosaic-page .demo-strip .demo-verdict { grid-column: 2; grid-row: 2; }
+  /* Sized by its content rather than to the reference. Eight rows of two
+     lines each is a height the phone layout can simply add up, and pinning it
+     to a number the way the counter panel needed is how a row gets clipped
+     the next time one is added. */
+  /* Ahead of the under-the-hood tile, the same way the desktop composition
+     now puts the shots in the larger cell and the mechanism in the smaller:
+     what the thing looks like comes before the receipts for how it works. */
+  .mosaic-page .features  { order: 3; height: auto; padding: 18rem 16rem 16rem; }
+
+  /* The phone layout is a scrolling column, so the footer needs a width and a
+     little air rather than a place in the grid. */
+  .mosaic-page .mosaic-foot {
+    width: 375rem; margin: 16rem auto 4rem;
+  }
+  .mosaic-page .mosaic-foot p { font-size: 12.5rem; max-width: none; }
+  .mosaic-page .feat-list { gap: 4rem; }
+  /* 430: 472 for the two-line subhead (see Landing.jsx), less the 42 the
+     chart gave up when this panel moved into the narrower desktop cell. The
+     height is authored here rather than derived from the grid, so it does not
+     follow the chart on its own -- left at 472 the slack collected as a hole
+     between the paragraph and the bars. */
+  .mosaic-page .insights { order: 5; height: 430rem; }
+
+  .mosaic-page .intro-pad { padding: 24rem 18rem; }
+  .mosaic-page .intro :is(h1, h2) { font-size: 24rem; line-height: 1.24; }
+  .mosaic-page .intro-copy { font-size: 13rem; margin-top: 12rem; }
+  /* The field and the button stop sharing a line: at 375 units the button
+     leaves the field too narrow to hold its own placeholder, which is the
+     failure `responsive-test.mjs` measures directly. */
+  .mosaic-page .intro-do { flex-direction: column; align-items: stretch; gap: 9rem; margin-top: 18rem; }
+  .mosaic-page .bar-search { width: 100%; height: 52rem; padding: 0 16rem 0 8rem; gap: 11rem; }
+  .mosaic-page .mag { width: 36rem; height: 36rem; }
+  .mosaic-page .bar-search input { font-size: 14.5rem; }
+  .mosaic-page .intro-new { height: 44rem; font-size: 14rem; }
+  .mosaic-page .intro .docs-link { font-size: 13rem; }
+
+  .mosaic-page .strip-lede h2 { font-size: 19rem; }
+  .mosaic-page .strip-lede p { font-size: 12rem; }
+  .mosaic-page .demo-strip .go { font-size: 12.5rem; }
+  .mosaic-page .id-flag { font-size: 11rem; }
+
+  /* Only the panels above the fold animate; the rest are just present. */
+  html.motion-pending .mosaic-page .insights,
+  html.motion-pending .mosaic-page .features { opacity: 1; visibility: visible; }
+  html.entrance-run .mosaic-page .insights,
+  html.entrance-run .mosaic-page .features,
+  html.entrance-run .mosaic-page .chart,
+  html.entrance-run .mosaic-page .bar-search { animation: none; }
+}
+

@@ -1,0 +1,83 @@
+# Keep the deployed services from going cold.
+#
+# WHAT THIS IS ACTUALLY FIXING
+#
+# Two independent suspensions stack on the first visit to an idle site:
+#
+#   Render   a free-tier web service is spun down after ~15 minutes with no
+#            traffic, and the next request has to wait for the container to be
+#            scheduled and Node to boot. This is the expensive one -- tens of
+#            seconds.
+#   Neon     a compute scales to zero after 5 minutes idle, and the first query
+#            pays a cold start of a few hundred milliseconds. Suspension can
+#            only be turned off on a paid plan, so on free the only lever is to
+#            keep querying.
+#
+# Note the ratio before optimising anything else: Render's wake dominates
+# Neon's by two orders of magnitude. A cache in front of the database does not
+# touch either one -- the container still has to start, and the boot path still
+# has to reach Postgres -- which is why this file exists and a cache does not.
+#
+# `/api/health` is the right thing to hit because it is not a static response:
+# it calls `store.listDocs`, so one request keeps BOTH the Render instance and
+# the Neon compute warm. See backend/src/transport/api.js.
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS DOES NOT GUARANTEE
+#
+# GitHub's scheduled runs are best-effort and are routinely delayed by several
+# minutes at busy times, so a 10-minute cron against a 15-minute idle timeout
+# will occasionally lose the race and let the service sleep. That is accepted:
+# the failure mode is one slow visit, which is the status quo, not a breakage.
+# A paid uptime pinger is the fix if that ever stops being acceptable.
+#
+# GitHub also disables scheduled workflows on a repository with no pushes for
+# 60 days, and will not tell you it has. If the site starts feeling slow again,
+# check the Actions tab before checking the code.
+#
+# Free-tier instance hours are the other constraint: an always-awake service
+# uses ~730 of the 750 hours a month, so this pings ONE service. `collab-ot`
+# is the lab's second engine and is left to sleep -- see ADR-009 for why it
+# carries no real documents.
+# ---------------------------------------------------------------------------
+name: Keep-alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  # So you can prove it works without waiting for the cron.
+  workflow_dispatch:
+
+# A queued ping is worthless -- if one run is somehow still going, the next
+# one's turn has already come round.
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    # The URL is a repository VARIABLE, not a secret: it is the public address
+    # of a public site, and a secret would only make the logs unreadable.
+    # e.g. https://collab-yjs.onrender.com
+    env:
+      HEALTH_URL: ${{ vars.KEEPALIVE_URL }}
+    steps:
+      - name: Ping /api/health
+        run: |
+          if [ -z "$HEALTH_URL" ]; then
+            echo "KEEPALIVE_URL is not set -- nothing to ping."
+            echo "Set it under Settings > Secrets and variables > Actions > Variables."
+            exit 0
+          fi
+          # --max-time 90, because waking a spun-down instance is the case this
+          # exists for and the slow response IS the success. Retries cover the
+          # window where Render has accepted the connection but Node is not
+          # listening yet, which presents as a 502.
+          curl --silent --show-error --fail \
+               --max-time 90 \
+               --retry 3 --retry-delay 20 --retry-all-errors \
+               --write-out '\nHTTP %{http_code} in %{time_total}s\n' \
+               "$HEALTH_URL/api/health"

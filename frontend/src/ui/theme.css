@@ -1,0 +1,84 @@
+/**
+ * The shared visual language, lifted out of the landing mosaic.
+ *
+ * The mosaic itself cannot be reused: it is a fixed 1374x666 stage whose every
+ * dimension is a design unit scaled by the root font-size. That is a poster,
+ * not a layout system. What IS reusable is the look -- pastel gradient cards
+ * with a bright white hairline border and a very soft shadow, dark ink on a
+ * light grey page -- and that is what lives here.
+ *
+ * These are the five card washes from the mosaic, named after what they look
+ * like rather than what they were used for on the landing page, because they
+ * are used for different things now:
+ *
+ *   blush   pink        the landing's notification card
+ *   lime    yellow-green the "two engines" panel
+ *   cream   warm sand   the delta-sync panel
+ *   lilac   violet      the chips panel
+ *   sky     cool blue   the search panel
+ *
+ * A gradient is a background, never a container: nothing here sets size,
+ * spacing or position. Layout stays with the component that owns it.
+ */
+
+:root {
+  /* Card washes. */
+  --wash-blush: linear-gradient(135deg, #f9d9e9 0%, #fbdfec 55%, #fce6f1 100%);
+  --wash-lime: linear-gradient(168deg, #e2ebc9 0%, #e9f0c4 48%, #f0f4b8 78%, #f3f5b0 100%);
+  --wash-cream: linear-gradient(160deg, #fdf6ef 0%, #f9f1e8 55%, #f7ece0 100%);
+  --wash-lilac: linear-gradient(103deg, #eae9f5 0%, #e2e0f1 34%, #cfcdea 72%, #c2c0e6 100%);
+  --wash-sky: linear-gradient(180deg, #fcfdfd 0%, #f4f7f9 30%, #e2ebef 66%, #cedce4 100%);
+
+  /*
+   * A scrim for washes on TALL panels.
+   *
+   * The five washes were drawn for the mosaic's cards, which are wide and
+   * short: the gradient sweeps across a broad area and each end arrives as a
+   * hint. A side panel is the opposite shape -- narrow and full-height -- so
+   * the same gradient runs end to end down a 900px column and the saturated
+   * stop lands as a solid block of colour. Cream and blush get away with it
+   * because they are pale at BOTH ends; lime and lilac do not, and a task
+   * list under a wash that strong reads as a highlighter rather than as the
+   * landing page.
+   *
+   * Layered under the wash as a flat white fill, so the hue survives and only
+   * the intensity drops -- to roughly where the comments pane already sits,
+   * which is the level the product had already settled on.
+   */
+  --wash-scrim: rgba(255, 255, 255, 0.62);
+
+  /* The card treatment itself. */
+  --card-radius: 18px;
+  --card-radius-sm: 12px;
+  --card-border: 1.5px solid rgba(255, 255, 255, 0.92);
+  --card-shadow: 0 2px 16px rgba(24, 30, 45, 0.055);
+  --card-shadow-lift: 0 10px 30px rgba(24, 30, 45, 0.10);
+}
+
+/**
+ * One class, five modifiers. Everything that wants to look like the landing
+ * page uses this rather than restating the border and shadow, so changing the
+ * treatment is one edit instead of a search.
+ */
+.wash {
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+.wash-blush { background: var(--wash-blush); }
+.wash-lime { background: var(--wash-lime); }
+.wash-cream { background: var(--wash-cream); }
+.wash-lilac { background: var(--wash-lilac); }
+.wash-sky { background: var(--wash-sky); }
+.wash-paper { background: #ffffff; }
+
+/**
+ * Text on a wash.
+ *
+ * The washes are pale enough that ordinary body ink reads fine, but the dim
+ * and faint greys from the token set were tuned against white and go muddy on
+ * the lilac and sky ones. These lean darker to compensate.
+ */
+.wash .wash-dim { color: #4d535d; }
+.wash .wash-faint { color: #767c86; }

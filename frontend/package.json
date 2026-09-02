@@ -1,0 +1,27 @@
+{
+  "name": "@collab/client",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@collab/ot": "*",
+    "@collab/protocol": "*",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.6",
+    "codemirror": "^6.0.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "y-codemirror.next": "^0.3.5",
+    "y-indexeddb": "^9.0.12",
+    "yjs": "^13.6.32",
+    "@codemirror/search": "^6.5.11"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "vite": "^8.2.1"
+  }
+}

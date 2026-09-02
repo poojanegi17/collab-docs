@@ -1,0 +1,112 @@
+/* The long-form pages -- /engines, and any that follow it -- in the landing
+   page's material.
+
+   They used to be plain text on the page background: correct for reading, and
+   a different product from the site that links to them. The mosaic's whole
+   visual argument is pastel cards with a bright hairline and a soft shadow on
+   a grey desk, so that is what these are now.
+
+   The split between the two card treatments is deliberate and is about
+   READING, not decoration:
+
+     the hero      a wash. It is three lines of large type, which a gradient
+                   cannot hurt, and it is the one element that says which page
+                   you are on.
+     the sections  white. Long prose over a gradient is worse prose -- the
+                   contrast under a line of text changes as it crosses the
+                   card -- so the body keeps the same paper the editor uses,
+                   with the same border, radius and shadow as everything else.
+
+   Wider than 780: a card spends 24px of each side on padding, so the same
+   measure needs a wider box to sit in.
+
+   These rules lived in the /scale stylesheet until that page was removed,
+   which is why other pages were importing a third one's CSS. They are the
+   shared long-form shell, so they live in a file of their own. */
+
+.prose-page {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 34px 20px 110px;
+  color: var(--fg);
+}
+
+.prose-head {
+  padding: 22px 26px 26px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--wash-lime);
+  box-shadow: var(--card-shadow);
+}
+
+.prose-back {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  text-decoration: none;
+  font-family: var(--mono);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line-bright);
+}
+.prose-back:hover { color: var(--fg); }
+
+.prose-head h1 {
+  margin: 20px 0 0;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.prose-lede {
+  margin: 16px 0 0;
+  font-size: 16.5px;
+  line-height: 1.65;
+  color: var(--fg-dim);
+}
+.prose-section code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: rgba(20, 24, 35, 0.06);
+  /* Explicit, not inherited. These chips inherit a faint grey from their
+     paragraph and then add a 6% dark tint UNDER it, which cost just enough
+     contrast to fail (4.28:1) -- a background applied to a run of text has to
+     bring its own foreground. */
+  color: var(--fg-dim);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+/* Paper. The 46px of empty page that used to separate one section from the
+   next is now the card edge doing it, so the gap comes down to the rhythm the
+   rest of the site uses between cards. */
+.prose-section {
+  margin-top: 18px;
+  padding: 22px 26px 12px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+.prose-section h2 {
+  margin: 0 0 14px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.prose-section p { margin: 0 0 12px; font-size: 15px; line-height: 1.7; }
+
+.prose-section h3 {
+  margin: 26px 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* The coloured first phrase of a headline. */
+.prose-tint { color: var(--accent); }
+
+.prose-link { color: var(--accent); text-decoration: none; font-weight: 600; }
+.prose-link:hover { text-decoration: underline; }

@@ -1,0 +1,86 @@
+<!--
+  A trimmed Google Docs `files.export?mimeType=text/html` response.
+
+  Kept as a fixture rather than as a string in the test because the point of it
+  is that it is SHAPED like the real thing, and the real thing has properties
+  that are easy to forget when you invent markup by hand:
+
+    - no <b> or <i> anywhere. Boldness lives in a stylesheet, on a class.
+    - every span states every property, including the defaults.
+    - hrefs are wrapped in the google.com/url click redirector.
+    - list nesting is real <ul>/<ol> nesting AND a margin-left per level.
+    - the stylesheet opens with an @import and contains selectors with
+      combinators, which the class map has to skip rather than misread.
+    - it ends with an empty paragraph.
+
+  Shortened from a real export: the list-counter rules and the base64 image are
+  gone, and the class names are the ones Google actually generated.
+-->
+<html>
+<head>
+<meta content="text/html; charset=UTF-8" http-equiv="content-type">
+<title>Quarterly Notes</title>
+<style type="text/css">
+@import url('https://themes.googleusercontent.com/fonts/css?kit=xTOoZr6X-i3kNg7pYrzM');
+@page { size: 8.5in 11.0in; margin: 1.0in; }
+.lst-kix_list_1-0 > li { counter-increment: lst-ctn-kix_list_1-0 }
+ul.lst-kix_list_1-0 { list-style-type: none }
+.c0 { color: #000000; font-weight: 400; text-decoration: none; font-size: 11pt; font-family: "Arial"; font-style: normal }
+.c1 { color: #000000; font-weight: 700; text-decoration: none; font-size: 11pt; font-family: "Arial"; font-style: normal }
+.c2 { color: #000000; font-weight: 400; text-decoration: none; font-size: 11pt; font-family: "Arial"; font-style: italic }
+.c3 { color: #b91c1c; font-weight: 400; text-decoration: none; font-size: 11pt; font-family: "Arial" }
+.c4 { background-color: #fef08a; color: #000000; font-weight: 400; font-size: 11pt; font-family: "Arial" }
+.c5 { color: #000000; font-weight: 400; text-decoration: none; font-size: 24pt; font-family: "Times New Roman" }
+.c6 { color: #000000; font-weight: 400; text-decoration: line-through; font-size: 11pt; font-family: "Arial" }
+.c7 { color: #1155cc; text-decoration: underline; font-size: 11pt; font-family: "Arial" }
+.c8 { color: #000000; font-weight: 400; font-size: 11pt; font-family: "Papyrus" }
+.para { margin-left: 0pt; text-align: left; line-height: 1.15; orphans: 2; widows: 2 }
+.center { margin-left: 0pt; text-align: center; line-height: 1.5 }
+.indented { margin-left: 36pt; text-align: left; line-height: 1.15 }
+.li1 { margin-left: 36pt; padding-left: 0pt }
+.li2 { margin-left: 72pt; padding-left: 0pt }
+.title { padding-top: 0pt; margin-left: 0pt; text-align: left }
+.doc { background-color: #ffffff; max-width: 468pt; padding: 72pt }
+</style>
+</head>
+<body class="doc">
+<h1 class="title"><span class="c1">Quarterly Notes</span></h1>
+<p class="para"><span class="c0">Plain text with a </span><span class="c1">bold word</span><span class="c0"> and an </span><span class="c2">italic</span><span class="c0"> one.</span></p>
+<p class="para"><span class="c3">Red text</span><span class="c0">, </span><span class="c4">highlighted text</span><span class="c0">, and </span><span class="c6">struck out</span><span class="c0">.</span></p>
+<p class="para"><span class="c0">See </span><a class="c7" href="https://www.google.com/url?q=https://example.com/report&amp;sa=D&amp;source=editors&amp;ust=1724500000&amp;usg=AOvVaw0">the report</a><span class="c0"> for details.</span></p>
+<p class="center"><span class="c5">A centred line at 24pt in Times</span></p>
+<h3 class="title"><span class="c1">A third-level heading</span></h3>
+<h4 class="title"><span class="c1">A fourth-level heading</span></h4>
+<p class="indented"><span class="c0">An indented paragraph.</span></p>
+<ul class="lst-kix_list_1-0 start">
+  <li class="li1"><span class="c0">First bullet</span></li>
+  <li class="li1"><span class="c0">Second bullet</span>
+    <ul class="lst-kix_list_1-1 start">
+      <li class="li2"><span class="c0">Nested bullet</span></li>
+    </ul>
+  </li>
+</ul>
+<ol class="lst-kix_list_2-0 start">
+  <li class="li1"><span class="c0">First step</span></li>
+  <li class="li1"><span class="c0">Second step</span></li>
+</ol>
+<p class="para"><span class="c0">Line one<br>line two after a break</span></p>
+<p class="para"><span class="c8">A paragraph set in Papyrus.</span></p>
+<blockquote class="para"><span class="c0">A quoted line.</span></blockquote>
+<p class="para"><span class="c0">Entities: caf&eacute; &amp; co &mdash; &ldquo;quoted&rdquo; &#8212; 5 &lt; 6.</span></p>
+<p class="para"><span style="overflow: hidden; display: inline-block; width: 234.00px; height: 120.00px;"><img alt="A chart" src="https://lh3.googleusercontent.com/chart-image" style="width: 234.00px; height: 120.00px;"></span></p>
+<table class="c9">
+  <tr class="c10">
+    <td class="c11"><p class="para"><span class="c1">Region</span></p></td>
+    <td class="c11"><p class="para"><span class="c1">Revenue</span></p></td>
+  </tr>
+  <tr class="c10">
+    <td class="c11"><p class="para"><span class="c0">North</span></p></td>
+    <td class="c11"><p class="para"><span class="c0">120</span></p></td>
+  </tr>
+</table>
+<p class="para"><a class="c7" href="javascript:alert(1)">not a link</a></p>
+<hr>
+<p class="para"><span class="c0"></span></p>
+</body>
+</html>

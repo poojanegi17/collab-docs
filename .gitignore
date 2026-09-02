@@ -1,0 +1,36 @@
+node_modules/
+dist/
+*.log
+data/
+.DS_Store
+.env
+tools/.probe.mjs
+
+# The harnesses need nothing ignored: each gets a throwaway Postgres SCHEMA
+# rather than a scratch file (tools/test-schema.mjs), so none of them writes
+# anything to the working tree.
+# `node tools/test-schema.mjs --clean` drops any that outlive a crashed run.
+tools/.svgcheck.*
+
+# Neon. `env pull` writes DATABASE_URL (which contains the role password) into
+# .env, or .env.local when there is no .env; `link`/`checkout` write the org,
+# project and branch ids into .neon. None of the three may ever be committed,
+# and .env alone was covering only the first of them.
+.env.local
+.env.*.local
+.neon
+
+# tools/no-local-state-test.mjs moves backend/data aside to prove the server
+# needs no filesystem state, and puts it back. Only visible if it crashes.
+backend/.data-stashed-by-test/
+
+# Agent tooling, not application code. `.agents/skills/` is a VENDORED COPY of
+# neondatabase/agent-skills -- someone else's documentation, pinned by
+# skills-lock.json and re-fetchable from that lock at any time. Nothing in the
+# repository imports it, no harness runs it, and no deploy reads it: it is a
+# local convenience for whoever is editing here, and committing it would put a
+# third party's files under this project's history for no one's benefit.
+# `.claude/settings.local.json` is per-developer by name and by intent.
+.agents/
+skills-lock.json
+.claude/settings.local.json

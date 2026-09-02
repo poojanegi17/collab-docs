@@ -1,0 +1,242 @@
+/*
+ * The decision record, as a grid of cards in the landing page's material.
+ *
+ * No contents rail. Rendering every record in full would need one, because a
+ * reader cannot survive that much prose without a map -- but with each decision
+ * reduced to a picture and two sentences, the grid IS the map.
+ */
+
+.dec-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 34px 20px 110px;
+  color: var(--fg);
+}
+.dec-thin { max-width: 780px; }
+
+.dec-back {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  text-decoration: none;
+  font-family: var(--mono);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line-bright);
+}
+.dec-back:hover { color: var(--fg); }
+
+.dec-note { margin-top: 20px; color: var(--fg-dim); line-height: 1.7; }
+.dec-note code { font-family: var(--mono); font-size: .92em; }
+
+/* ---------------------------------------------------------------- header -- */
+
+.dec-head {
+  padding: 22px 26px 26px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--wash-lime);
+  box-shadow: var(--card-shadow);
+}
+.dec-head h1 {
+  margin: 20px 0 0;
+  font-size: 40px; font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.1;
+}
+.dec-lede {
+  margin: 16px 0 0;
+  font-size: 16.5px; line-height: 1.65;
+  color: var(--fg-dim);
+}
+.dec-meta {
+  margin: 14px 0 0;
+  font-family: var(--mono); font-size: 12px;
+  color: var(--fg-faint);
+}
+
+/* ------------------------------------------------------------------ grid -- */
+
+/* Two columns on a desktop, and no more. Three fits, and at three the diagram
+   is too small to read the labels inside it -- which is the only reason the
+   card exists. */
+.dec-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.dec-card {
+  padding: 18px 20px 16px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  /* An in-page jump has somewhere to land that is not flush with the
+     viewport edge -- /engines deep-links to individual decisions. */
+  scroll-margin-top: 18px;
+}
+
+/* Opening one turns it into the page's main column. A card of body text at
+   half width is a column of about forty characters, which is unreadable, and
+   the grid would otherwise stretch its neighbour to match. */
+.dec-card:has(.adr-prose) { grid-column: 1 / -1; }
+
+
+.adr-kicker { display: flex; align-items: center; gap: 10px; }
+.adr-kicker-num {
+  font-family: var(--mono); font-size: 11.5px;
+  letter-spacing: .06em;
+  color: var(--fg-faint);
+}
+.adr-status {
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: .05em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px;
+  background: rgba(47, 143, 91, .12); color: var(--ok);
+}
+/* A record where every entry says "accepted" is not much of a record. These
+   are here so a superseded or withdrawn ADR reads differently at a glance
+   the moment one exists. */
+.adr-status.is-superseded,
+.adr-status.is-withdrawn { background: rgba(176, 122, 8, .13); color: var(--warn); }
+.adr-h {
+  margin: 10px 0 0;
+  font-size: 19px; font-weight: 750;
+  letter-spacing: -0.02em; line-height: 1.25;
+}
+
+/* The picture, on the wash the rest of the site uses for a quiet inset. */
+.dec-dia {
+  margin: 12px 0 0;
+  padding: 6px 8px;
+  border-radius: var(--card-radius-sm);
+  background: var(--wash-sky);
+  border: 1px solid var(--line);
+}
+/* Capped, and centred once it is capped.
+   The SVG is authored at 320 wide and scales to its container, so an OPEN
+   card -- which spans both grid columns -- blew the diagram up to roughly
+   twice its intended size, with 30px labels. A diagram has a size it was
+   drawn for; past that it is not clearer, only bigger. */
+.dec-dia .dia { display: block; width: 100%; max-width: 380px; height: auto; margin: 0 auto; }
+
+.dec-brief {
+  margin: 12px 0 0;
+  font-size: 14px; line-height: 1.62;
+  color: var(--fg-dim);
+}
+
+.dec-more {
+  margin-top: 12px;
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 5px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line-bright);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.dec-more:hover { border-color: var(--accent); color: var(--fg); }
+.dec-more[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+
+.adr-consequence {
+  margin: 12px 0 0;
+  padding: 10px 13px;
+  border-left: 3px solid var(--accent);
+  background: var(--wash-cream);
+  border-radius: 0 var(--card-radius-sm) var(--card-radius-sm) 0;
+  font-size: 13.5px; line-height: 1.55;
+  color: var(--fg);
+}
+
+/* ----------------------------------------------------------------- prose -- */
+
+.adr-prose { margin-top: 8px; }
+
+.md-p { margin: 15px 0 0; font-size: 15px; line-height: 1.72; color: var(--fg-dim); }
+.md-p strong { color: var(--fg); font-weight: 680; }
+
+.md-h { margin: 30px 0 0; letter-spacing: -0.015em; line-height: 1.3; color: var(--fg); }
+.md-h3 { font-size: 17.5px; font-weight: 720; }
+.md-h4 { font-size: 14.5px; font-weight: 700; }
+.md-h5, .md-h6 {
+  font-size: 12.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+  color: var(--fg-dim);
+}
+
+.md-list { margin: 13px 0 0; padding-left: 22px; }
+.md-list li {
+  margin-top: 7px;
+  font-size: 15px; line-height: 1.68; color: var(--fg-dim);
+}
+.md-list li strong { color: var(--fg); font-weight: 680; }
+
+.md-code {
+  font-family: var(--mono); font-size: .875em;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.1em 0.34em;
+  color: var(--fg);
+}
+
+.md-pre {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.md-pre code {
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.6;
+  color: var(--fg); white-space: pre;
+}
+
+.md-link { color: var(--accent); text-decoration: none; }
+.md-link:hover { text-decoration: underline; }
+
+.md-quote {
+  margin: 16px 0 0;
+  padding-left: 16px;
+  border-left: 3px solid var(--line-bright);
+}
+.md-quote .md-p { color: var(--fg-faint); }
+
+.md-hr { margin: 28px 0 0; border: none; border-top: 1px solid var(--line); }
+
+/* These tables are the widest thing on the page and a phone is not wide. The
+   table scrolls inside its own box so the page itself never does. */
+.md-table-wrap { margin: 18px 0 0; overflow-x: auto; border-radius: 10px; border: 1px solid var(--line); }
+.md-table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.md-table th, .md-table td {
+  text-align: left; vertical-align: top;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.6;
+}
+.md-table th {
+  background: var(--surface-2);
+  font-weight: 700; color: var(--fg);
+  white-space: nowrap;
+}
+.md-table td { color: var(--fg-dim); }
+.md-table tr:last-child td { border-bottom: none; }
+.md-table td strong { color: var(--fg); font-weight: 680; }
+
+/* ------------------------------------------------------------ responsive -- */
+
+@media (max-width: 900px) {
+  .dec-page { padding: 28px 14px 90px; }
+  /* One column. Two cards side by side on a phone makes each diagram about
+     150px wide, at which point its labels are unreadable and it is costing
+     space to say nothing. */
+  .dec-grid { grid-template-columns: minmax(0, 1fr); }
+  .dec-head h1 { font-size: 31px; }
+  .dec-lede { font-size: 15.5px; }
+}

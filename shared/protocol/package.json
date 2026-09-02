@@ -1,0 +1,12 @@
+{
+  "name": "@collab/protocol",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./yjs-wire": "./src/yjs-wire.js",
+    "./ot-wire": "./src/ot-wire.js"
+  },
+  "scripts": { "build": "echo \"(protocol is plain ESM, nothing to build)\"" }
+}
