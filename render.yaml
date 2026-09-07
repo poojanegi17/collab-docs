@@ -45,6 +45,12 @@ services:
     # It is idempotent, so re-running it after a schema change is correct.
     # Restore the line above if this ever moves to starter.
     startCommand: npm start -w @collab/server
+    # Must stay the SHALLOW check: it is polled continuously against a
+    # running instance, so a database query here is a query on a loop
+    # nobody is watching. It is also why the deep variant is opt-in --
+    # if Render checked that one, a Neon blip would read as an unhealthy
+    # instance and earn a restart, which cannot fix an upstream database
+    # and only adds a cold start. See backend/src/transport/api.js.
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
@@ -101,6 +107,12 @@ services:
     # same deploy is the catalogue race that ensureSchema's advisory lock
     # exists for, and not racing at all is better than winning.
     startCommand: npm start -w @collab/server -- --engine=ot
+    # Must stay the SHALLOW check: it is polled continuously against a
+    # running instance, so a database query here is a query on a loop
+    # nobody is watching. It is also why the deep variant is opt-in --
+    # if Render checked that one, a Neon blip would read as an unhealthy
+    # instance and earn a restart, which cannot fix an upstream database
+    # and only adds a cold start. See backend/src/transport/api.js.
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION

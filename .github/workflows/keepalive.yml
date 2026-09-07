@@ -9,18 +9,45 @@
 #            scheduled and Node to boot. This is the expensive one -- tens of
 #            seconds.
 #   Neon     a compute scales to zero after 5 minutes idle, and the first query
-#            pays a cold start of a few hundred milliseconds. Suspension can
-#            only be turned off on a paid plan, so on free the only lever is to
-#            keep querying.
+#            pays a cold start of a few hundred milliseconds.
 #
 # Note the ratio before optimising anything else: Render's wake dominates
-# Neon's by two orders of magnitude. A cache in front of the database does not
-# touch either one -- the container still has to start, and the boot path still
-# has to reach Postgres -- which is why this file exists and a cache does not.
+# Neon's by two orders of magnitude. Only the Render one is worth a cron.
 #
-# `/api/health` is the right thing to hit because it is not a static response:
-# it calls `store.listDocs`, so one request keeps BOTH the Render instance and
-# the Neon compute warm. See backend/src/transport/api.js.
+# ---------------------------------------------------------------------------
+# WHAT AN EARLIER VERSION OF THIS FILE GOT WRONG
+#
+# It pinged `/api/health` *because* that route queried Postgres, on the theory
+# that one request could keep both the Render instance and the Neon compute
+# warm. That reasoning treated Neon's scale-to-zero as the enemy. It is not --
+# it is the free plan's budget mechanism, and defeating it spends the entire
+# monthly allowance on a site with nobody on it:
+#
+#   Neon     compute never suspends    ~720 h/mo against ~192 h free
+#   Render   instance never sleeps     ~730 h/mo against 750 h free, and that
+#            750 is ACCOUNT-WIDE -- so collab-ot waking for the lab pushed the
+#            pair over and Render suspended both engine servers for the month.
+#
+# Two fixes, because those are two different quotas:
+#
+#   1. `/api/health` no longer touches the database. The aggregates moved to
+#      `?deep=1`, which nothing automated ever calls. See
+#      backend/src/transport/api.js. That alone fixes Neon.
+#   2. This cron runs in a WINDOW rather than around the clock, which is the
+#      only thing that fixes Render's instance-hours -- a cheap health route
+#      does nothing for them, because the container is awake either way.
+#
+# On the window: Render sleeps after ~15 idle minutes, so a cron at interval N
+# keeps the site warm for min(15, N) minutes out of every N. Widening to */45
+# would therefore buy a 33% chance of being warm for a third of the cost --
+# paying real budget for a coin flip. Better to stay at */10 and be reliably
+# warm during the hours a visitor actually arrives.
+#
+#   '*/10 3-16 * * *'   03:00-16:50 UTC = 08:30-22:35 IST, daily
+#                       ~14.1 h/day x 30 = ~423 h/mo, ~330 h of headroom
+#
+# The hours are UTC and the audience is assumed to be in IST. Both are worth
+# revisiting before the window is; the arithmetic above is what generalises.
 #
 # ---------------------------------------------------------------------------
 # WHAT THIS DOES NOT GUARANTEE
@@ -35,16 +62,18 @@
 # 60 days, and will not tell you it has. If the site starts feeling slow again,
 # check the Actions tab before checking the code.
 #
-# Free-tier instance hours are the other constraint: an always-awake service
-# uses ~730 of the 750 hours a month, so this pings ONE service. `collab-ot`
-# is the lab's second engine and is left to sleep -- see ADR-009 for why it
-# carries no real documents.
+# This pings ONE service. `collab-ot` is the lab's second engine and is left to
+# sleep -- see ADR-009 for why it carries no real documents. It still wakes on
+# demand when someone opens the lab under OT, and those hours come out of the
+# same account-wide 750; the window above is sized to leave room for them.
 # ---------------------------------------------------------------------------
 name: Keep-alive
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    # Windowed, not around the clock. See the arithmetic at the top of
+    # the file -- around the clock is what exhausted both free tiers.
+    - cron: '*/10 3-16 * * *'
   # So you can prove it works without waiting for the cron.
   workflow_dispatch:
 
@@ -61,7 +90,14 @@ jobs:
     runs-on: ubuntu-latest
     # The URL is a repository VARIABLE, not a secret: it is the public address
     # of a public site, and a secret would only make the logs unreadable.
-    # e.g. https://collab-yjs.onrender.com
+    #
+    # This deployment's value, so nobody has to guess it:
+    #
+    #     https://collab-yjs-1f8k.onrender.com
+    #
+    # An ORIGIN, with no trailing slash and no path -- the curl below appends
+    # `/api/health` itself. Render generates that `-1f8k` suffix per service,
+    # so a fork's URL will differ; the shape is the part to copy.
     env:
       HEALTH_URL: ${{ vars.KEEPALIVE_URL }}
     steps:
@@ -76,6 +112,9 @@ jobs:
           # exists for and the slow response IS the success. Retries cover the
           # window where Render has accepted the connection but Node is not
           # listening yet, which presents as a 502.
+          # No `?deep=1` here. This request must not reach Postgres --
+          # that is the whole point of the split, and the reason the
+          # window above is affordable.
           curl --silent --show-error --fail \
                --max-time 90 \
                --retry 3 --retry-delay 20 --retry-all-errors \

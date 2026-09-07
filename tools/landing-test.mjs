@@ -75,9 +75,21 @@ for (const [label, port] of [['CRDT', 8080], ['OT', 8081]]) {
 
   // The status panel's whole point is that these are real, so the test asserts
   // the shape rather than trusting the panel's own rendering of it.
-  const h = await (await fetch(`http://localhost:${port}/api/health`)).json();
-  check(`1c. ${label} serves /api/health with aggregates`,
-    h.ok === true && Number.isFinite(h.docs) && Number.isFinite(h.bytes)
+  // Shallow first: this is the shape Render and the keep-alive cron see, and
+  // the assertion that matters is what is ABSENT. The storage aggregates must
+  // not be here, because reaching storage on this path is what exhausted the
+  // database's monthly compute -- see .github/workflows/keepalive.yml.
+  const shallow = await (await fetch(`http://localhost:${port}/api/health`)).json();
+  check(`1c. ${label} serves a shallow /api/health that never reads storage`,
+    shallow.ok === true && Number.isFinite(shallow.clients)
+      && Number.isFinite(shallow.uptimeMs)
+      && !('docs' in shallow) && !('bytes' in shallow) && !('lastWrite' in shallow),
+    JSON.stringify(shallow));
+
+  const h = await (await fetch(`http://localhost:${port}/api/health?deep=1`)).json();
+  check(`1c2. ${label} serves /api/health?deep=1 with aggregates`,
+    h.ok === true && h.deep === true
+      && Number.isFinite(h.docs) && Number.isFinite(h.bytes)
       && Number.isFinite(h.clients) && Number.isFinite(h.uptimeMs),
     JSON.stringify(h));
   // No titles, no ids, no owners: an unauthenticated route must not become a

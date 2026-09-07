@@ -257,10 +257,17 @@ export function createApi({ store, accounts, rooms, config, makeEngine, rateLimi
      * scrypt cost in accounts.js is what makes it expensive to run.
      */
     if (rateLimiter) {
-      // `/api/health` is exempt. It is Render's health check AND the target of
-      // the keep-alive cron (ADR-022), so limiting it would mean the platform
-      // rate-limiting itself into declaring the service unhealthy.
-      if (path !== '/api/health') {
+      // The SHALLOW `/api/health` is exempt. It is Render's health check AND
+      // the target of the keep-alive cron (ADR-022), so limiting it would mean
+      // the platform rate-limiting itself into declaring the service unhealthy.
+      //
+      // `?deep=1` is NOT exempt, because it queries Postgres. An unmetered
+      // route that queries Postgres is a way for a stranger to drain the
+      // database's monthly compute quota -- which is the same failure the
+      // keep-alive cron caused by accident, minus the accident.
+      const shallowHealth = path === '/api/health'
+        && url.searchParams.get('deep') !== '1';
+      if (!shallowHealth) {
         const tier = RATE_TIERS.auth.has(path) ? 'auth'
           : method === 'GET' ? 'read'
             : 'write';
@@ -977,6 +984,27 @@ export function createApi({ store, accounts, rooms, config, makeEngine, rateLimi
     /**
      * What this node is doing right now.
      *
+     * TWO CHECKS, AND THE DEFAULT IS THE CHEAP ONE.
+     *
+     * The shallow answer reads memory only and never touches Postgres. It is
+     * what `healthCheckPath` points at in render.yaml and what the keep-alive
+     * cron hits -- both of them unattended, both of them forever. A database
+     * query on that path is billed to a quota nobody is watching, which is
+     * exactly how this project spent a month of Neon compute on an idle site.
+     * See .github/workflows/keepalive.yml.
+     *
+     * `?deep=1` adds the storage aggregates and answers a different question:
+     * whether this process can actually REACH Postgres. The two fail
+     * independently -- a healthy Node with an unreachable database passes the
+     * shallow check and is useless to a visitor -- so the deep one is the one
+     * to call by hand when the site loads but documents do not appear.
+     *
+     * Deliberately NOT wired to `healthCheckPath`: if Render checked the deep
+     * route, a Neon blip would read as an unhealthy instance and Render would
+     * restart it. Restarting cannot fix an upstream database; it only adds a
+     * cold start on the way back. It is also rate-limited where the shallow
+     * one is exempt -- see the limiter above.
+     *
      * Aggregates only -- counts, totals and a timestamp. No titles, no ids, no
      * owners: this route has no session and must not become a way to enumerate
      * other people's documents by asking politely.
@@ -987,36 +1015,43 @@ export function createApi({ store, accounts, rooms, config, makeEngine, rateLimi
      * document costs on disk.
      */
     if (path === '/api/health' && method === 'GET') {
-      const parents = new Set();
-      let bytes = 0;
-      let lastWrite = 0;
-      for (const d of await store.listDocs(1000)) {
-        parents.add(Store.tabOf(d.docId).docId);
-        bytes += d.bytes;
-        if (d.updatedAt > lastWrite) lastWrite = d.updatedAt;
-      }
-
       // Everyone attached to any room on this node. Rooms outnumber documents
       // whenever tabs are open, which is why this is summed rather than
       // reported as `rooms.size`.
       let clients = 0;
       for (const room of rooms.values()) clients += room.clients.size;
 
-      return json(res, 200, {
+      const body = {
         ok: true,
         engine: config.engine,
         port: config.port,
         rooms: rooms.size,
         clients,
-        docs: parents.size,
-        bytes,
-        lastWrite: lastWrite || null,
         uptimeMs: Date.now() - startedAt,
         // Cumulative work since boot. Room stats die with the room, so these
         // come from the process-wide counters in metrics.js.
         ...readMetrics(),
         batchWindowMs: config.broadcastWindowMs,
-      });
+      };
+
+      // The only branch in this file that reaches storage on a health check,
+      // and it is opt-in for the reasons above.
+      if (url.searchParams.get('deep') === '1') {
+        const parents = new Set();
+        let bytes = 0;
+        let lastWrite = 0;
+        for (const d of await store.listDocs(1000)) {
+          parents.add(Store.tabOf(d.docId).docId);
+          bytes += d.bytes;
+          if (d.updatedAt > lastWrite) lastWrite = d.updatedAt;
+        }
+        body.deep = true;
+        body.docs = parents.size;
+        body.bytes = bytes;
+        body.lastWrite = lastWrite || null;
+      }
+
+      return json(res, 200, body);
     }
 
     return false;
