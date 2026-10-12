@@ -99,7 +99,7 @@ jobs:
       - name: The decision index matches docs/decisions
         run: node tools/generate-adr-index.mjs --check
 
-      - name: OT transform laws (8k random assertions)
+      - name: OT transform laws (12k random assertions)
         run: node tools/ot-properties.mjs
       - name: Attributed transform laws, fuzzed
         run: node tools/rich-ot-properties.mjs
@@ -108,39 +108,14 @@ jobs:
       - name: Comment-anchor laws, and the pinned OT counterexample
         run: node tools/anchor-properties.mjs
 
-      # The three below drive the REAL sync clients and the REAL engines over
-      # an in-process transport (tools/lib/loopback.mjs), so they belong here
-      # rather than in `e2e`: convergence is a property of the engine, not of
-      # Postgres, and running them without a database is what lets them be
-      # seeded, fast and immune to whatever the link to Neon is doing.
-      - name: Convergence across 8 replicas under randomised partitions
-        run: node tools/converge-properties.mjs
-      - name: What a slow link costs each engine (ADR-005)
-        run: node tools/measure-latency.mjs
-      - name: Broadcast fan-out, and the batching threshold (ADR-016)
-        run: node tools/measure-fanout.mjs
-      # --loopback: no server, no database. Measures the protocol in isolation,
-      # which is a weaker floor than a real join envelope -- the e2e job runs the
-      # live-server default, and that is the one the landing page quotes.
-      - name: A reconnect costs what changed, not what the document weighs
-        run: node tools/measure-delta.mjs --loopback
-
-      # The figures are generated FROM the artifacts, so they cannot drift from
-      # the measurement -- which is the failure the deleted /scale page taught.
-      # The fan-out chart is a byte comparison; the timeline re-runs the capture
-      # and checks that it still shows what it claims, because frame timing is
-      # wall-clock and a byte comparison would fail for reasons that are not drift.
-      - name: The fan-out chart matches fanout.json
-        run: node tools/render-fanout-chart.mjs --check
-      - name: The partition timeline still shows what it claims
-        run: node tools/render-partition-timeline.mjs --check
-
-      # A measurement rather than an assertion: it fails only if the harness
-      # itself broke. It runs in CI so the published table cannot quietly stop
-      # describing the current code, which is the same reason the durability
-      # measurement runs in `e2e`.
-      - name: Load — where the concurrency layer stops keeping up
-        run: node tools/measure-load.mjs
+      # NOT HERE YET: the database-free measurement harnesses -- convergence
+      # under partitions, latency, fan-out, load -- and the two generated-figure
+      # checks. They belong in this job, because they need no Postgres, but the
+      # scripts (and `tools/lib/loopback.mjs`, which they import) are not in the
+      # repository yet, and the figure checks additionally read `docs/media/*.svg`,
+      # which is not tracked either. Adding the steps before the tooling is what
+      # broke this workflow once already. Add them in the SAME commit as the
+      # scripts, not before.
       - name: 'Sanitisers -- no javascript: links, no CSS escaping its property'
         run: node tools/attribute-safety-test.mjs
       - name: Markdown export -- what it keeps and what it admits losing
@@ -256,27 +231,12 @@ jobs:
           DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
         run: node tools/measure-durability.mjs
 
-      # Needs a live CRDT server, so it cannot join the pure job with the other
-      # measurements. It asserts the shape of the state-vector handshake: a
-      # document that grows a hundredfold must not make the reconnect grow with
-      # it, or delta sync has stopped happening and nothing else would notice.
-      # The same assertions as the `pure` job runs in-process, but over a real
-      # socket against a real server. Only this one proves the transport agrees
-      # with the loopback the other measurements are built on.
-      # The authoritative one: a real socket, so `lastSyncRecv` includes the join
-      # envelope the landing page's figures were taken with. It also asserts the
-      # page's constants still match what it just measured.
-      # Three sizes rather than seven. The claim is that a hundredfold larger
-      # document does not cost a hundredfold more to rejoin, and three points
-      # demonstrate that for a third of the Postgres traffic. `npm run
-      # measure:delta` still sweeps all seven when refreshing the published
-      # figures, which is a thing you do deliberately and rarely.
-      - name: Reconnect cost over a real socket, and the landing page agrees
-        env:
-          DATABASE_URL: ${{ steps.app.outputs.db_url_pooled }}
-          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
-          DELTA_SIZES: '1000,10000,100000'
-        run: node tools/measure-delta.mjs
+      # NOT HERE YET: the reconnect-cost measurement over a real socket. It
+      # wants `DELTA_SIZES` to sweep three document sizes rather than seven, for
+      # a third of the Postgres traffic -- but the committed `measure-delta.mjs`
+      # does not read that variable, so setting it would silently sweep all seven
+      # and spend MORE Neon transfer than leaving the step out. Add it with the
+      # script change that teaches it `DELTA_SIZES`, not before.
 
       - name: Server logs
         if: failure()
