@@ -37,8 +37,39 @@ name: CI
 on:
   push:
     branches: ['**']
+    # Skip the whole run for changes that cannot break a server, a query or a
+    # browser journey. Prose and figures are the bulk of what gets pushed
+    # between features, and every one of those pushes used to create two Neon
+    # branches and run two database suites against the same free-tier data
+    # allowance the deployment needs in order to boot.
+    #
+    # This is a WORKFLOW-level filter, so it skips `pure` too -- that is the
+    # point, since a README edit cannot break a transform law either.
+    #
+    # `docs/decisions/**` is deliberately NOT here. An ADR is prose, but the
+    # generated index is checked against it (`generate-adr-index --check`), so
+    # editing one is exactly when that check needs to run. Hence `docs/*.md`
+    # rather than `docs/**`.
+    paths-ignore:
+      - 'docs/*.md'
+      - 'docs/media/**'
+      - 'docs/medium-upload/**'
+      - 'docs/article-page.html'
+      - 'README.md'
+      - 'frontend/public/shots/**'
   pull_request:
   workflow_dispatch:
+
+# One run per ref. Pushing three times in a minute used to start three full
+# runs, each creating its own Neon branches against the same free project.
+#
+# NOT cancelled on main: a cancelled job may not finish its `if: always()`
+# cleanup, which would leave the branch behind -- and an orphaned branch costs
+# storage on a plan that has very little. Feature branches are cheap to retry,
+# so they are the ones allowed to be interrupted.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   NODE_VERSION: '24'
@@ -68,7 +99,7 @@ jobs:
       - name: The decision index matches docs/decisions
         run: node tools/generate-adr-index.mjs --check
 
-      - name: OT transform laws (12k random assertions)
+      - name: OT transform laws (8k random assertions)
         run: node tools/ot-properties.mjs
       - name: Attributed transform laws, fuzzed
         run: node tools/rich-ot-properties.mjs
@@ -76,6 +107,40 @@ jobs:
         run: node tools/rich-ot-checklist.mjs
       - name: Comment-anchor laws, and the pinned OT counterexample
         run: node tools/anchor-properties.mjs
+
+      # The three below drive the REAL sync clients and the REAL engines over
+      # an in-process transport (tools/lib/loopback.mjs), so they belong here
+      # rather than in `e2e`: convergence is a property of the engine, not of
+      # Postgres, and running them without a database is what lets them be
+      # seeded, fast and immune to whatever the link to Neon is doing.
+      - name: Convergence across 8 replicas under randomised partitions
+        run: node tools/converge-properties.mjs
+      - name: What a slow link costs each engine (ADR-005)
+        run: node tools/measure-latency.mjs
+      - name: Broadcast fan-out, and the batching threshold (ADR-016)
+        run: node tools/measure-fanout.mjs
+      # --loopback: no server, no database. Measures the protocol in isolation,
+      # which is a weaker floor than a real join envelope -- the e2e job runs the
+      # live-server default, and that is the one the landing page quotes.
+      - name: A reconnect costs what changed, not what the document weighs
+        run: node tools/measure-delta.mjs --loopback
+
+      # The figures are generated FROM the artifacts, so they cannot drift from
+      # the measurement -- which is the failure the deleted /scale page taught.
+      # The fan-out chart is a byte comparison; the timeline re-runs the capture
+      # and checks that it still shows what it claims, because frame timing is
+      # wall-clock and a byte comparison would fail for reasons that are not drift.
+      - name: The fan-out chart matches fanout.json
+        run: node tools/render-fanout-chart.mjs --check
+      - name: The partition timeline still shows what it claims
+        run: node tools/render-partition-timeline.mjs --check
+
+      # A measurement rather than an assertion: it fails only if the harness
+      # itself broke. It runs in CI so the published table cannot quietly stop
+      # describing the current code, which is the same reason the durability
+      # measurement runs in `e2e`.
+      - name: Load — where the concurrency layer stops keeping up
+        run: node tools/measure-load.mjs
       - name: 'Sanitisers -- no javascript: links, no CSS escaping its property'
         run: node tools/attribute-safety-test.mjs
       - name: Markdown export -- what it keeps and what it admits losing
@@ -90,9 +155,36 @@ jobs:
       - name: The bundle is within budget
         run: node tools/bundle-budget.mjs
 
+  # ---------------------------------------------------------------------------
+  # WHY THE DATABASE JOBS DO NOT RUN ON A PUSH AT ALL
+  #
+  # Both of these create Neon branches -- three between them -- and a branch is
+  # a clone inside the SAME free project, so every byte they move counts against
+  # one shared data transfer allowance. Exhausting it does not degrade the site,
+  # it takes it down: the server refuses to start without Postgres (ADR-019), so
+  # the container boot-loops and Render serves nothing at all.
+  #
+  # An earlier version of this guard allowed `main` alongside pull requests and
+  # manual runs, on the reasoning that feature branches are where the noisy
+  # pushes happen. That reasoning does not hold for THIS repository: `main` is
+  # the only branch that is ever pushed, so allowing it allowed everything and
+  # the guard saved nothing. `paths-ignore` above was doing all the work, and
+  # only for prose -- which is no longer committed here either.
+  #
+  # So: never on a push. A push gets `pure`, which needs no database and carries
+  # most of what is worth knowing early -- the transform laws, 8-replica
+  # convergence, the latency and fan-out measurements, and the generated
+  # figures. The database suites run on demand (`workflow_dispatch`) and on a
+  # pull request, if one is ever opened.
+  #
+  # The cost of this is real and accepted: a regression in a Postgres path is
+  # not caught until someone asks for a run. On a free tier where running out
+  # takes the whole site down, an unnoticed regression is the cheaper failure.
+  # ---------------------------------------------------------------------------
   e2e:
     name: End to end (both engines)
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -164,6 +256,28 @@ jobs:
           DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
         run: node tools/measure-durability.mjs
 
+      # Needs a live CRDT server, so it cannot join the pure job with the other
+      # measurements. It asserts the shape of the state-vector handshake: a
+      # document that grows a hundredfold must not make the reconnect grow with
+      # it, or delta sync has stopped happening and nothing else would notice.
+      # The same assertions as the `pure` job runs in-process, but over a real
+      # socket against a real server. Only this one proves the transport agrees
+      # with the loopback the other measurements are built on.
+      # The authoritative one: a real socket, so `lastSyncRecv` includes the join
+      # envelope the landing page's figures were taken with. It also asserts the
+      # page's constants still match what it just measured.
+      # Three sizes rather than seven. The claim is that a hundredfold larger
+      # document does not cost a hundredfold more to rejoin, and three points
+      # demonstrate that for a third of the Postgres traffic. `npm run
+      # measure:delta` still sweeps all seven when refreshing the published
+      # figures, which is a thing you do deliberately and rarely.
+      - name: Reconnect cost over a real socket, and the landing page agrees
+        env:
+          DATABASE_URL: ${{ steps.app.outputs.db_url_pooled }}
+          DATABASE_URL_ADMIN: ${{ steps.db.outputs.db_url }}
+          DELTA_SIZES: '1000,10000,100000'
+        run: node tools/measure-delta.mjs
+
       - name: Server logs
         if: failure()
         run: tail -n 100 /tmp/crdt.log /tmp/ot.log
@@ -179,6 +293,8 @@ jobs:
   browser:
     name: Real Chrome
     runs-on: ubuntu-latest
+    # Same reasoning as `e2e` above: its own Neon branch, the same shared quota.
+    if: github.event_name != 'push'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
